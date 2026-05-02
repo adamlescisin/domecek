@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (body.isActive !== undefined) updates.isActive = body.isActive ? 1 : 0;
   if (body.sortOrder !== undefined) updates.sortOrder = Number(body.sortOrder);
 
-  const db = await getDb();
+  const db = getDb();
   await db.update(items).set(updates).where(eq(items.id, id));
   const [updated] = await db.select().from(items).where(eq(items.id, id));
 
@@ -37,7 +37,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
-  const db = await getDb();
+  const db = getDb();
   await db.delete(items).where(eq(items.id, id));
   return NextResponse.json({ ok: true });
 }

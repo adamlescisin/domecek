@@ -2,7 +2,7 @@ import { getDb } from './client';
 import { items } from './schema';
 
 async function seed() {
-  const db = await getDb();
+  const db = getDb();
   const now = new Date();
 
   await db.insert(items).values([

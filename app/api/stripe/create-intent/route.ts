@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   }
 
   const ids = requested.map((i) => i.id);
-  const db = await getDb();
+  const db = getDb();
   const dbItems = await db.select().from(items).where(inArray(items.id, ids));
 
   const lineItems = requested.flatMap(({ id, quantity }) => {
