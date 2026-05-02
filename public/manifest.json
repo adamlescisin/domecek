@@ -1,0 +1,14 @@
+{
+  "name": "Domeček u Josefa — Obchod",
+  "short_name": "DuJ Shop",
+  "description": "Objednejte si služby Domečku u Josefa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F3EE",
+  "theme_color": "#1C1C1A",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
