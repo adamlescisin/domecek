@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcrypt';
+import { timingSafeEqual } from 'crypto';
 import { signAdminToken, COOKIE_NAME } from '@/lib/auth';
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -31,8 +31,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
   }
 
-  const hash = Buffer.from(process.env.ADMIN_PASSWORD_HASH!, 'base64').toString('utf8');
-  const valid = await bcrypt.compare(password, hash);
+  const adminPassword = process.env.ADMIN_PASSWORD ?? '';
+  if (!adminPassword) {
+    return NextResponse.json({ error: 'Server chyba' }, { status: 500 });
+  }
+
+  // Use timing-safe comparison to prevent timing attacks
+  const a = Buffer.from(password);
+  const b = Buffer.from(adminPassword);
+  const valid = a.length === b.length && timingSafeEqual(a, b);
+
   if (!valid) {
     return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
   }
