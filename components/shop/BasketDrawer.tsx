@@ -12,7 +12,7 @@ interface BasketDrawerProps {
 }
 
 export default function BasketDrawer({ open, onClose, onCheckout }: BasketDrawerProps) {
-  const { items, updateQuantity, removeItem, total } = useBasket();
+  const { items, updateQuantity, total } = useBasket();
 
   return (
     <>

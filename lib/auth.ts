@@ -1,5 +1,4 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { cookies } from 'next/headers';
 
 const COOKIE_NAME = 'duj_admin_token';
 const secret = () => new TextEncoder().encode(process.env.JWT_SECRET!);
