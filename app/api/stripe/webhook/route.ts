@@ -16,7 +16,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (event.type === 'payment_intent.succeeded') {
-    const pi = event.data.object as any;
+    const pi = event.data.object as {
+      id: string;
+      status: string;
+      amount: number;
+      receipt_email?: string;
+      metadata?: { items?: string };
+      charges?: { data?: Array<{ billing_details?: { email?: string; name?: string } }> };
+    };
     const lineItems = JSON.parse(pi.metadata?.items ?? '[]');
     const totalCzk = pi.amount / 100;
     const customerEmail = pi.receipt_email ?? pi.charges?.data?.[0]?.billing_details?.email ?? '';
