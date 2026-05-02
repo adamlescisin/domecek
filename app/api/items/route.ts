@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     updatedAt: now,
   });
 
-  const [created] = await db.select().from(items).where(eq(items.id, (result as any).insertId));
+  const insertResult = result as { insertId: number };
+  const [created] = await db.select().from(items).where(eq(items.id, insertResult.insertId));
   return NextResponse.json(created, { status: 201 });
 }

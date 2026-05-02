@@ -2,7 +2,7 @@
 
 import { useBasket } from '@/lib/basket-context';
 import { formatCZK } from '@/lib/utils';
-import { Minus, Plus, ShoppingBag } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 
 interface Item {
   id: number;
