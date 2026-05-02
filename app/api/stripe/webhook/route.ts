@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const customerName = pi.charges?.data?.[0]?.billing_details?.name ?? 'Zákazník';
     const now = new Date();
 
-    const db = await getDb();
+    const db = getDb();
     await db.insert(orders).values({
       stripePaymentId: pi.id,
       stripeStatus: pi.status,

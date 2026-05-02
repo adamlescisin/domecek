@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    const db = await getDb();
+    const db = getDb();
     await db.execute(sql`SELECT 1`);
     return NextResponse.json({ ok: true, db: 'connected' });
   } catch (err) {

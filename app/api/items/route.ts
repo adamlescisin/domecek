@@ -5,7 +5,7 @@ import { eq, asc } from 'drizzle-orm';
 import { isAdminRequest } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
-  const db = await getDb();
+  const db = getDb();
   const admin = await isAdminRequest(req);
 
   const rows = admin
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Chybí povinná pole' }, { status: 400 });
   }
 
-  const db = await getDb();
+  const db = getDb();
   const now = new Date();
   const [result] = await db.insert(items).values({
     name,
