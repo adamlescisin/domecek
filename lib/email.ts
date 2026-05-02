@@ -1,6 +1,8 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY!);
+}
 
 interface LineItem {
   id: number;
@@ -37,7 +39,7 @@ function itemRows(items: LineItem[]) {
 
 export async function sendCustomerReceipt(data: OrderEmailData) {
   const { customerEmail, customerName, lineItems, totalCzk } = data;
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to: customerEmail,
     subject: 'Děkujeme za vaši objednávku — Domeček u Josefa',
@@ -82,7 +84,7 @@ export async function sendCustomerReceipt(data: OrderEmailData) {
 
 export async function sendAdminNotification(data: OrderEmailData) {
   const { customerEmail, customerName, lineItems, totalCzk, stripePaymentId, createdAt } = data;
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to: process.env.ADMIN_EMAIL!,
     subject: `💰 Nová platba — ${formatCZK(totalCzk)}`,
