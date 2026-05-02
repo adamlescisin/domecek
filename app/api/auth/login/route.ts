@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
   }
 
-  const valid = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH!);
+  const hash = Buffer.from(process.env.ADMIN_PASSWORD_HASH!, 'base64').toString('utf8');
+  const valid = await bcrypt.compare(password, hash);
   if (!valid) {
     return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
   }
