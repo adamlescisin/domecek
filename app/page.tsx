@@ -8,6 +8,7 @@ import { useBasket } from '@/lib/basket-context';
 import { formatCZK } from '@/lib/utils';
 import Logo from '@/components/ui/Logo';
 import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 import ItemCard from '@/components/shop/ItemCard';
 import BasketDrawer from '@/components/shop/BasketDrawer';
 import CheckoutForm from '@/components/shop/CheckoutForm';
