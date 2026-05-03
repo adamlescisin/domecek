@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { signAdminToken, COOKIE_NAME } from '@/lib/auth';
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -21,29 +21,40 @@ function isRateLimited(ip: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = getIp(req);
-  if (isRateLimited(ip)) {
-    return NextResponse.json({ error: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
-  }
+  try {
+    const ip = getIp(req);
+    if (isRateLimited(ip)) {
+      return NextResponse.json({ error: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
+    }
 
-  const { password } = await req.json();
-  if (!password) {
-    return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
-  }
+    const { password } = await req.json();
+    if (!password) {
+      return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
+    }
 
-  const valid = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH!);
-  if (!valid) {
-    return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
-  }
+    const hash = process.env.ADMIN_PASSWORD_HASH;
+    if (!hash) {
+      console.error('ADMIN_PASSWORD_HASH is not set');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
-  const token = await signAdminToken();
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 60 * 60 * 24,
-    path: '/',
-  });
-  return res;
+    const valid = await bcrypt.compare(password, hash);
+    if (!valid) {
+      return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
+    }
+
+    const token = await signAdminToken();
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24,
+      path: '/',
+    });
+    return res;
+  } catch (err) {
+    console.error('Login error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
