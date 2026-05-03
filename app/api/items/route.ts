@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db/client';
-import { items } from '@/lib/db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { getItems, createItem } from '@/lib/store';
 import { isAdminRequest } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
-  const db = getDb();
   const admin = await isAdminRequest(req);
-
-  const rows = admin
-    ? await db.select().from(items).orderBy(asc(items.sortOrder))
-    : await db.select().from(items).where(eq(items.isActive, 1)).orderBy(asc(items.sortOrder));
-
-  return NextResponse.json(rows);
+  const items = getItems();
+  const result = admin
+    ? [...items].sort((a, b) => a.sortOrder - b.sortOrder)
+    : [...items].filter((i) => i.isActive === 1).sort((a, b) => a.sortOrder - b.sortOrder);
+  return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {
@@ -27,19 +23,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Chybí povinná pole' }, { status: 400 });
   }
 
-  const db = getDb();
-  const now = new Date();
-  const [result] = await db.insert(items).values({
+  const item = createItem({
     name,
     description: description ?? null,
-    priceCzk: String(priceCzk),
+    priceCzk: Number(priceCzk).toFixed(2),
     isActive: isActive ? 1 : 0,
     sortOrder: Number(sortOrder),
-    createdAt: now,
-    updatedAt: now,
   });
 
-  const insertResult = result as { insertId: number };
-  const [created] = await db.select().from(items).where(eq(items.id, insertResult.insertId));
-  return NextResponse.json(created, { status: 201 });
+  return NextResponse.json(item, { status: 201 });
 }
