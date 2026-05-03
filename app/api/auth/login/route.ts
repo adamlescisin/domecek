@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { signAdminToken, COOKIE_NAME } from '@/lib/auth';
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -32,14 +31,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
     }
 
-    const hash = process.env.ADMIN_PASSWORD_HASH;
-    if (!hash) {
-      console.error('ADMIN_PASSWORD_HASH is not set');
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      console.error('ADMIN_PASSWORD is not set');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const valid = await bcrypt.compare(password, hash);
-    if (!valid) {
+    if (password !== adminPassword) {
       return NextResponse.json({ error: 'Nesprávné heslo' }, { status: 401 });
     }
 

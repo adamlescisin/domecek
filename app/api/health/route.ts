@@ -10,7 +10,7 @@ export async function GET() {
       items: items.length,
       orders: orders.length,
       env: {
-        ADMIN_PASSWORD_HASH: !!process.env.ADMIN_PASSWORD_HASH,
+        ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
         JWT_SECRET: !!process.env.JWT_SECRET,
       },
     });
