@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db/client';
-import { items } from '@/lib/db/schema';
-import { inArray } from 'drizzle-orm';
+import { getItems } from '@/lib/store';
 import { stripe } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
@@ -12,12 +10,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No items' }, { status: 400 });
   }
 
-  const ids = requested.map((i) => i.id);
-  const db = getDb();
-  const dbItems = await db.select().from(items).where(inArray(items.id, ids));
+  const allItems = getItems();
 
   const lineItems = requested.flatMap(({ id, quantity }) => {
-    const item = dbItems.find((i) => i.id === id && i.isActive === 1);
+    const item = allItems.find((i) => i.id === id && i.isActive === 1);
     if (!item) return [];
     return [{ id, name: item.name, priceCzk: parseFloat(item.priceCzk), quantity }];
   });

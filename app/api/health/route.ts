@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getPool } from '@/lib/db/client';
+import { getItems, getOrders } from '@/lib/store';
 
 export async function GET() {
   try {
-    const pool = getPool();
-    const conn = await pool.getConnection();
-    await conn.ping();
-    conn.release();
-    return NextResponse.json({ ok: true, db: 'connected' });
+    const items = getItems();
+    const orders = getOrders();
+    return NextResponse.json({ ok: true, items: items.length, orders: orders.length });
   } catch (err) {
-    const e = err as NodeJS.ErrnoException & { code?: string; sqlMessage?: string };
-    return NextResponse.json(
-      { ok: false, error: e.message, code: e.code, sqlMessage: e.sqlMessage },
-      { status: 503 }
-    );
+    const e = err as Error;
+    return NextResponse.json({ ok: false, error: e.message }, { status: 503 });
   }
 }

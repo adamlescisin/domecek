@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { getDb } from '@/lib/db/client';
-import { orders } from '@/lib/db/schema';
+import { upsertOrder } from '@/lib/store';
 import { sendCustomerReceipt, sendAdminNotification } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
@@ -24,22 +23,22 @@ export async function POST(req: NextRequest) {
       metadata?: { items?: string };
       charges?: { data?: Array<{ billing_details?: { email?: string; name?: string } }> };
     };
+
     const lineItems = JSON.parse(pi.metadata?.items ?? '[]');
     const totalCzk = pi.amount / 100;
     const customerEmail = pi.receipt_email ?? pi.charges?.data?.[0]?.billing_details?.email ?? '';
     const customerName = pi.charges?.data?.[0]?.billing_details?.name ?? 'Zákazník';
     const now = new Date();
 
-    const db = getDb();
-    await db.insert(orders).values({
+    upsertOrder({
       stripePaymentId: pi.id,
       stripeStatus: pi.status,
       totalCzk: String(totalCzk),
       customerEmail,
       customerName,
       lineItems,
-      createdAt: now,
-    }).onDuplicateKeyUpdate({ set: { stripeStatus: pi.status } });
+      createdAt: now.toISOString(),
+    });
 
     const emailData = {
       customerEmail,
