@@ -20,13 +20,13 @@ export async function POST(req: NextRequest) {
       status: string;
       amount: number;
       receipt_email?: string;
-      metadata?: { items?: string };
+      metadata?: { items?: string; customer_email?: string };
       charges?: { data?: Array<{ billing_details?: { email?: string; name?: string } }> };
     };
 
     const lineItems = JSON.parse(pi.metadata?.items ?? '[]');
     const totalCzk = pi.amount / 100;
-    const customerEmail = pi.receipt_email ?? pi.charges?.data?.[0]?.billing_details?.email ?? '';
+    const customerEmail = pi.receipt_email ?? pi.metadata?.customer_email ?? pi.charges?.data?.[0]?.billing_details?.email ?? '';
     const customerName = pi.charges?.data?.[0]?.billing_details?.name ?? 'Zákazník';
     const now = new Date();
 

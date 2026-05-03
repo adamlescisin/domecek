@@ -7,6 +7,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { useBasket } from '@/lib/basket-context';
 import { formatCZK } from '@/lib/utils';
 import Logo from '@/components/ui/Logo';
+import Input from '@/components/ui/Input';
 import ItemCard from '@/components/shop/ItemCard';
 import BasketDrawer from '@/components/shop/BasketDrawer';
 import CheckoutForm from '@/components/shop/CheckoutForm';
@@ -40,6 +41,8 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [basketOpen, setBasketOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
   const [success, setSuccess] = useState(false);
@@ -52,25 +55,38 @@ export default function ShopPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleCheckout() {
+  function handleCheckout() {
     setBasketOpen(false);
+    setClientSecret(null);
+    setCheckoutOpen(true);
+  }
+
+  async function handleEmailSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailError('Zadejte platnou e-mailovou adresu');
+      return;
+    }
+    setEmailError('');
     const res = await fetch('/api/stripe/create-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         items: basketItems.map((i) => ({ id: i.id, quantity: i.quantity })),
+        email: trimmed,
       }),
     });
     const data = await res.json();
     setClientSecret(data.clientSecret);
     setCheckoutTotal(data.total);
-    setCheckoutOpen(true);
   }
 
   function handleSuccess() {
     clearBasket();
     setCheckoutOpen(false);
     setClientSecret(null);
+    setEmail('');
     setSuccess(true);
   }
 
@@ -128,10 +144,12 @@ export default function ShopPage() {
       />
 
       {/* Checkout modal */}
-      {checkoutOpen && clientSecret && (
+      {checkoutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm">
           <div className="bg-warm-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 flex flex-col gap-5">
             <h2 className="font-display text-xl font-semibold text-charcoal">Platba</h2>
+
+            {/* Order summary */}
             <div className="border border-border rounded-xl p-4">
               <p className="font-body text-sm text-charcoal/60 mb-3">Shrnutí objednávky</p>
               {basketItems.map((i) => (
@@ -140,16 +158,43 @@ export default function ShopPage() {
                   <span>{formatCZK(i.priceCzk * i.quantity)}</span>
                 </div>
               ))}
-              <div className="border-t border-border mt-2 pt-2 flex justify-between font-body font-medium text-charcoal">
-                <span>Celkem</span>
-                <span>{formatCZK(checkoutTotal)}</span>
-              </div>
+              {clientSecret && (
+                <div className="border-t border-border mt-2 pt-2 flex justify-between font-body font-medium text-charcoal">
+                  <span>Celkem</span>
+                  <span>{formatCZK(checkoutTotal)}</span>
+                </div>
+              )}
             </div>
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance: stripeAppearance }}>
-              <CheckoutForm total={checkoutTotal} onSuccess={handleSuccess} />
-            </Elements>
+
+            {/* Step 1: email */}
+            {!clientSecret && (
+              <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
+                <Input
+                  id="checkout-email"
+                  type="email"
+                  label="E-mail pro potvrzení objednávky"
+                  placeholder="vas@email.cz"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                  error={emailError}
+                  autoFocus
+                  autoComplete="email"
+                />
+                <Button type="submit" size="lg" className="w-full">
+                  Pokračovat k platbě
+                </Button>
+              </form>
+            )}
+
+            {/* Step 2: Stripe payment */}
+            {clientSecret && (
+              <Elements stripe={stripePromise} options={{ clientSecret, appearance: stripeAppearance }}>
+                <CheckoutForm total={checkoutTotal} onSuccess={handleSuccess} />
+              </Elements>
+            )}
+
             <button
-              onClick={() => setCheckoutOpen(false)}
+              onClick={() => { setCheckoutOpen(false); setClientSecret(null); }}
               className="font-body text-sm text-charcoal/50 hover:text-charcoal transition-colors text-center"
             >
               Zpět do košíku

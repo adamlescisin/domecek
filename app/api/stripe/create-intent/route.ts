@@ -5,6 +5,7 @@ import { stripe } from '@/lib/stripe';
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const requested: Array<{ id: number; quantity: number }> = body.items;
+  const email: string | undefined = body.email;
 
   if (!Array.isArray(requested) || requested.length === 0) {
     return NextResponse.json({ error: 'No items' }, { status: 400 });
@@ -28,9 +29,11 @@ export async function POST(req: NextRequest) {
     amount: Math.round(totalCzk * 100),
     currency: 'czk',
     automatic_payment_methods: { enabled: true },
+    ...(email ? { receipt_email: email } : {}),
     metadata: {
       items: JSON.stringify(lineItems),
       source: 'domecek-shop-pwa',
+      ...(email ? { customer_email: email } : {}),
     },
   });
 
