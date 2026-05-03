@@ -46,7 +46,7 @@ export default function CheckoutForm({ total, onSuccess }: CheckoutFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <PaymentElement />
+      <PaymentElement options={{ wallets: { applePay: 'auto', googlePay: 'auto' } }} />
       {error && <p className="font-body text-sm text-error">{error}</p>}
       <Button type="submit" size="lg" className="w-full" loading={processing} disabled={!stripe}>
         Zaplatit {formatCZK(total)}

@@ -32,11 +32,11 @@ const nextConfig = pwaConfig({
       { protocol: 'https', hostname: 'www.domecekujosefa.cz' },
     ],
   },
-  async headers() {
+  async rewrites() {
     return [
       {
         source: '/.well-known/apple-developer-merchantid-domain-association',
-        headers: [{ key: 'Content-Type', value: 'application/octet-stream' }],
+        destination: 'https://stripe.com/apple-pay/association-file',
       },
     ];
   },
