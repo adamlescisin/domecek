@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "name": "Snídaně v košíku",
+    "description": "Výborná snídaně donesená v předem dohodnutý čas. Nutno objednat do 12:00 předchozího dne.",
+    "priceCzk": "250.00",
+    "isActive": 1,
+    "sortOrder": 1,
+    "sectionId": null,
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "name": "Koupací sud (1 den)",
+    "description": "Pronájem koupacího sudu pro až 6 osob. Zatopení, úklid a ručníky v ceně.",
+    "priceCzk": "1000.00",
+    "isActive": 1,
+    "sortOrder": 2,
+    "sectionId": null,
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "name": "Sauna (1 den)",
+    "description": "Pronájem sauny pro až 6 osob. Zatopení, úklid a ručníky v ceně.",
+    "priceCzk": "1000.00",
+    "isActive": 1,
+    "sortOrder": 3,
+    "sectionId": null,
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 4,
+    "name": "Úklid po mazlíčkovi",
+    "description": "Příplatek za úklid po malém pejskovi.",
+    "priceCzk": "200.00",
+    "isActive": 1,
+    "sortOrder": 4,
+    "sectionId": null,
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 5,
+    "name": "Dřevo do krbu (pytel)",
+    "description": "Pytel suchého dřeva pro romantické večery u krbu.",
+    "priceCzk": "150.00",
+    "isActive": 0,
+    "sortOrder": 5,
+    "sectionId": null,
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  }
+]
