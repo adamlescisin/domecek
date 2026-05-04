@@ -162,11 +162,11 @@ export default function ShopPage() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-10">
             {groups.map((group) => (
               <section key={group.sectionId ?? 'unsectioned'}>
                 {group.label && (
-                  <h2 className="font-display text-lg font-semibold text-charcoal mb-4 pb-2 border-b border-border">
+                  <h2 className="font-display text-xl font-semibold text-charcoal mb-4">
                     {group.label}
                   </h2>
                 )}
