@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, description, priceCzk, isActive = true, sortOrder = 0 } = body;
+    const { name, description, priceCzk, isActive = true, sortOrder = 0, sectionId } = body;
 
     if (!name || !priceCzk || Number(priceCzk) <= 0) {
       return NextResponse.json({ error: 'Chybí povinná pole' }, { status: 400 });
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       priceCzk: Number(priceCzk).toFixed(2),
       isActive: isActive ? 1 : 0,
       sortOrder: Number(sortOrder),
+      sectionId: sectionId != null ? Number(sectionId) : null,
     });
 
     return NextResponse.json(item, { status: 201 });

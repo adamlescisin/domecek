@@ -6,6 +6,7 @@
     "priceCzk": "250.00",
     "isActive": 1,
     "sortOrder": 1,
+    "sectionId": null,
     "createdAt": "2025-01-01T00:00:00.000Z",
     "updatedAt": "2025-01-01T00:00:00.000Z"
   },
@@ -16,6 +17,7 @@
     "priceCzk": "1000.00",
     "isActive": 1,
     "sortOrder": 2,
+    "sectionId": null,
     "createdAt": "2025-01-01T00:00:00.000Z",
     "updatedAt": "2025-01-01T00:00:00.000Z"
   },
@@ -26,6 +28,7 @@
     "priceCzk": "1000.00",
     "isActive": 1,
     "sortOrder": 3,
+    "sectionId": null,
     "createdAt": "2025-01-01T00:00:00.000Z",
     "updatedAt": "2025-01-01T00:00:00.000Z"
   },
@@ -36,6 +39,7 @@
     "priceCzk": "200.00",
     "isActive": 1,
     "sortOrder": 4,
+    "sectionId": null,
     "createdAt": "2025-01-01T00:00:00.000Z",
     "updatedAt": "2025-01-01T00:00:00.000Z"
   },
@@ -46,6 +50,7 @@
     "priceCzk": "150.00",
     "isActive": 0,
     "sortOrder": 5,
+    "sectionId": null,
     "createdAt": "2025-01-01T00:00:00.000Z",
     "updatedAt": "2025-01-01T00:00:00.000Z"
   }

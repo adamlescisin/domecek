@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, LogOut } from 'lucide-react';
+import { Plus, LogOut, Pencil, Trash2, Check, X } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import ItemTable from '@/components/admin/ItemTable';
@@ -15,31 +15,101 @@ interface Item {
   priceCzk: string;
   isActive: number;
   sortOrder: number;
+  sectionId: number | null;
+}
+
+interface Section {
+  id: number;
+  name: string;
+  sortOrder: number;
 }
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
 
+  // Section management state
+  const [newSectionName, setNewSectionName] = useState('');
+  const [addingSection, setAddingSection] = useState(false);
+  const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState('');
+  const [deleteSectionConfirm, setDeleteSectionConfirm] = useState<number | null>(null);
+
   const fetchItems = useCallback(async () => {
+    const res = await fetch('/api/items?admin=true');
+    setItems(await res.json());
+  }, []);
+
+  const fetchSections = useCallback(async () => {
+    const res = await fetch('/api/sections');
+    setSections(await res.json());
+  }, []);
+
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/items?admin=true');
-      setItems(await res.json());
+      await Promise.all([fetchItems(), fetchSections()]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchItems, fetchSections]);
 
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    fetchAll();
+  }, [fetchAll]);
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/admin/login');
+  }
+
+  async function handleAddSection() {
+    const name = newSectionName.trim();
+    if (!name) return;
+    setAddingSection(true);
+    try {
+      await fetch('/api/sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, sortOrder: sections.length }),
+      });
+      setNewSectionName('');
+      await fetchSections();
+    } finally {
+      setAddingSection(false);
+    }
+  }
+
+  async function handleUpdateSection(id: number) {
+    const name = editingSectionName.trim();
+    if (!name) return;
+    await fetch(`/api/sections/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    setEditingSectionId(null);
+    await fetchSections();
+  }
+
+  async function handleDeleteSection(id: number) {
+    // Move items in this section to null
+    const sectionItems = items.filter((i) => i.sectionId === id);
+    await Promise.all(
+      sectionItems.map((item) =>
+        fetch(`/api/items/${item.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sectionId: null }),
+        })
+      )
+    );
+    await fetch(`/api/sections/${id}`, { method: 'DELETE' });
+    setDeleteSectionConfirm(null);
+    await fetchAll();
   }
 
   const active = items.filter((i) => i.isActive === 1).length;
@@ -81,6 +151,89 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Section management */}
+        <div className="flex flex-col gap-4">
+          <h2 className="font-display text-xl font-semibold text-charcoal">Sekce</h2>
+          <div className="bg-warm-white rounded-xl border border-border p-4 flex flex-col gap-3">
+            {sections.length === 0 && (
+              <p className="font-body text-sm text-charcoal/40">
+                Zatím žádné sekce. Přidejte první sekci níže.
+              </p>
+            )}
+            {sections.sort((a, b) => a.sortOrder - b.sortOrder).map((section) => (
+              <div key={section.id} className="flex items-center gap-2">
+                {editingSectionId === section.id ? (
+                  <>
+                    <input
+                      autoFocus
+                      value={editingSectionName}
+                      onChange={(e) => setEditingSectionName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleUpdateSection(section.id);
+                        if (e.key === 'Escape') setEditingSectionId(null);
+                      }}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-cream font-body text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-charcoal/20"
+                    />
+                    <button
+                      onClick={() => handleUpdateSection(section.id)}
+                      className="p-1.5 rounded-lg hover:bg-sand/20 text-charcoal transition-colors"
+                    >
+                      <Check size={16} />
+                    </button>
+                    <button
+                      onClick={() => setEditingSectionId(null)}
+                      className="p-1.5 rounded-lg hover:bg-cream text-charcoal/50 transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 font-body text-sm text-charcoal">{section.name}</span>
+                    <span className="font-body text-xs text-charcoal/30">
+                      {items.filter((i) => i.sectionId === section.id).length} pol.
+                    </span>
+                    <button
+                      onClick={() => { setEditingSectionId(section.id); setEditingSectionName(section.name); }}
+                      className="p-1.5 rounded-lg hover:bg-sand/20 text-charcoal transition-colors"
+                      aria-label="Přejmenovat"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteSectionConfirm(section.id)}
+                      className="p-1.5 rounded-lg hover:bg-error/10 text-error transition-colors"
+                      aria-label="Smazat sekci"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {/* Add new section */}
+            <div className="flex items-center gap-2 pt-1 border-t border-border">
+              <input
+                value={newSectionName}
+                onChange={(e) => setNewSectionName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddSection(); }}
+                placeholder="Název nové sekce…"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-cream font-body text-sm text-charcoal placeholder:text-charcoal/30 focus:outline-none focus:ring-2 focus:ring-charcoal/20"
+              />
+              <Button
+                size="sm"
+                onClick={handleAddSection}
+                loading={addingSection}
+                disabled={!newSectionName.trim()}
+              >
+                <Plus size={15} className="mr-1" />
+                Přidat
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Items table */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -96,16 +249,43 @@ export default function AdminDashboardPage() {
               <p className="font-body text-charcoal/40">Načítám…</p>
             </div>
           ) : (
-            <ItemTable items={items} onRefresh={fetchItems} />
+            <ItemTable items={items} sections={sections} onRefresh={fetchAll} />
           )}
         </div>
       </main>
 
       {addOpen && (
         <ItemModal
+          sections={sections}
           onClose={() => setAddOpen(false)}
-          onSave={() => { setAddOpen(false); fetchItems(); }}
+          onSave={() => { setAddOpen(false); fetchAll(); }}
         />
+      )}
+
+      {/* Confirm delete section */}
+      {deleteSectionConfirm !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm">
+          <div className="bg-warm-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4">
+            <h3 className="font-display text-lg font-semibold text-charcoal">Smazat sekci?</h3>
+            <p className="font-body text-sm text-charcoal/60">
+              Položky v této sekci budou přesunuty do &ldquo;Bez sekce&rdquo;. Tato akce je nevratná.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteSectionConfirm(null)}
+                className="font-body text-sm px-4 py-2 rounded-xl border border-border hover:bg-cream transition-colors"
+              >
+                Zrušit
+              </button>
+              <button
+                onClick={() => handleDeleteSection(deleteSectionConfirm)}
+                className="font-body text-sm px-4 py-2 rounded-xl bg-error text-white hover:bg-red-700 transition-colors"
+              >
+                Smazat sekci
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -6,12 +6,18 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import ToggleSwitch from './ToggleSwitch';
 
+interface Section {
+  id: number;
+  name: string;
+}
+
 interface ItemFormData {
   name: string;
   description: string;
   priceCzk: string;
   isActive: boolean;
   sortOrder: string;
+  sectionId: string;
 }
 
 interface Item {
@@ -21,17 +27,26 @@ interface Item {
   priceCzk: string;
   isActive: number;
   sortOrder: number;
+  sectionId: number | null;
 }
 
 interface ItemModalProps {
   item?: Item | null;
+  sections: Section[];
   onClose: () => void;
   onSave: () => void;
 }
 
-const empty: ItemFormData = { name: '', description: '', priceCzk: '', isActive: true, sortOrder: '0' };
+const empty: ItemFormData = {
+  name: '',
+  description: '',
+  priceCzk: '',
+  isActive: true,
+  sortOrder: '0',
+  sectionId: '',
+};
 
-export default function ItemModal({ item, onClose, onSave }: ItemModalProps) {
+export default function ItemModal({ item, sections, onClose, onSave }: ItemModalProps) {
   const [form, setForm] = useState<ItemFormData>(empty);
   const [errors, setErrors] = useState<Partial<ItemFormData>>({});
   const [saving, setSaving] = useState(false);
@@ -44,6 +59,7 @@ export default function ItemModal({ item, onClose, onSave }: ItemModalProps) {
         priceCzk: item.priceCzk,
         isActive: item.isActive === 1,
         sortOrder: String(item.sortOrder),
+        sectionId: item.sectionId != null ? String(item.sectionId) : '',
       });
     } else {
       setForm(empty);
@@ -74,6 +90,7 @@ export default function ItemModal({ item, onClose, onSave }: ItemModalProps) {
           priceCzk: parseFloat(form.priceCzk),
           isActive: form.isActive,
           sortOrder: parseInt(form.sortOrder) || 0,
+          sectionId: form.sectionId ? parseInt(form.sectionId) : null,
         }),
       });
       onSave();
@@ -125,6 +142,20 @@ export default function ItemModal({ item, onClose, onSave }: ItemModalProps) {
             error={errors.priceCzk}
             placeholder="250"
           />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="section" className="font-body text-sm font-medium text-charcoal">Sekce</label>
+            <select
+              id="section"
+              value={form.sectionId}
+              onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))}
+              className="px-3 py-2.5 rounded-lg border border-border bg-warm-white font-body text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-charcoal/20 focus:border-charcoal transition-colors"
+            >
+              <option value="">— Bez sekce —</option>
+              {sections.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
           <Input
             id="sortOrder"
             label="Pořadí"

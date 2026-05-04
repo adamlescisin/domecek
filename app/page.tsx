@@ -35,10 +35,18 @@ interface Item {
   description: string | null;
   priceCzk: string;
   isActive: number;
+  sectionId: number | null;
+}
+
+interface Section {
+  id: number;
+  name: string;
+  sortOrder: number;
 }
 
 export default function ShopPage() {
   const [items, setItems] = useState<Item[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [basketOpen, setBasketOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -50,10 +58,13 @@ export default function ShopPage() {
   const { count, items: basketItems, clearBasket } = useBasket();
 
   useEffect(() => {
-    fetch('/api/items')
-      .then((r) => r.json())
-      .then(setItems)
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch('/api/items').then((r) => r.json()),
+      fetch('/api/sections').then((r) => r.json()),
+    ]).then(([fetchedItems, fetchedSections]) => {
+      setItems(fetchedItems);
+      setSections(fetchedSections);
+    }).finally(() => setLoading(false));
   }, []);
 
   function handleCheckout() {
@@ -90,6 +101,21 @@ export default function ShopPage() {
     setEmail('');
     setSuccess(true);
   }
+
+  // Build grouped display
+  const sortedSections = [...sections].sort((a, b) => a.sortOrder - b.sortOrder);
+  const groups: Array<{ sectionId: number | null; label: string | null; items: Item[] }> = [
+    ...sortedSections.map((s) => ({
+      sectionId: s.id,
+      label: s.name,
+      items: items.filter((i) => i.sectionId === s.id),
+    })),
+    {
+      sectionId: null,
+      label: sortedSections.length > 0 ? 'Ostatní' : null,
+      items: items.filter((i) => i.sectionId == null),
+    },
+  ].filter((g) => g.items.length > 0);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -128,10 +154,28 @@ export default function ShopPage() {
           <div className="flex justify-center py-16">
             <LoadingSpinner className="w-8 h-8" />
           </div>
-        ) : (
+        ) : groups.length === 1 && groups[0].label === null ? (
+          // No sections – flat grid
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {items.map((item) => (
+            {groups[0].items.map((item) => (
               <ItemCard key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-8">
+            {groups.map((group) => (
+              <section key={group.sectionId ?? 'unsectioned'}>
+                {group.label && (
+                  <h2 className="font-display text-lg font-semibold text-charcoal mb-4 pb-2 border-b border-border">
+                    {group.label}
+                  </h2>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {group.items.map((item) => (
+                    <ItemCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

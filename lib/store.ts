@@ -22,6 +22,13 @@ function writeJson<T>(filename: string, data: T): void {
   writeFileSync(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf-8');
 }
 
+export interface Section {
+  id: number;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface Item {
   id: number;
   name: string;
@@ -29,6 +36,7 @@ export interface Item {
   priceCzk: string;
   isActive: number;
   sortOrder: number;
+  sectionId: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +50,45 @@ export interface Order {
   customerName: string;
   lineItems: unknown[];
   createdAt: string;
+}
+
+// ── Sections ─────────────────────────────────────────────────────────────────
+
+export function getSections(): Section[] {
+  return readJson<Section[]>('sections.json', []);
+}
+
+function saveSections(sections: Section[]): void {
+  writeJson('sections.json', sections);
+}
+
+export function createSection(data: Omit<Section, 'id' | 'createdAt'>): Section {
+  const sections = getSections();
+  const nextId = sections.length > 0 ? Math.max(...sections.map((s) => s.id)) + 1 : 1;
+  const section: Section = { id: nextId, ...data, createdAt: new Date().toISOString() };
+  saveSections([...sections, section]);
+  return section;
+}
+
+export function updateSection(
+  id: number,
+  updates: Partial<Omit<Section, 'id' | 'createdAt'>>
+): Section | null {
+  const sections = getSections();
+  const idx = sections.findIndex((s) => s.id === id);
+  if (idx === -1) return null;
+  const updated: Section = { ...sections[idx], ...updates };
+  sections[idx] = updated;
+  saveSections(sections);
+  return updated;
+}
+
+export function deleteSection(id: number): boolean {
+  const sections = getSections();
+  const next = sections.filter((s) => s.id !== id);
+  if (next.length === sections.length) return false;
+  saveSections(next);
+  return true;
 }
 
 // ── Items ────────────────────────────────────────────────────────────────────
