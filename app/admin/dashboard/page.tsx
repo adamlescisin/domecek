@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, LogOut, Pencil, Trash2, Check, X } from 'lucide-react';
+import { formatCZK } from '@/lib/utils';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import ItemTable from '@/components/admin/ItemTable';
@@ -24,12 +25,37 @@ interface Section {
   sortOrder: number;
 }
 
+interface Order {
+  id: number;
+  stripeStatus: string;
+  totalCzk: string;
+  createdAt: string;
+}
+
+type SalesPeriod = '7d' | '30d' | 'all';
+
+const PERIODS: { key: SalesPeriod; label: string }[] = [
+  { key: '7d', label: 'Posledních 7 dní' },
+  { key: '30d', label: 'Poslední měsíc' },
+  { key: 'all', label: 'Celkem' },
+];
+
+function computeRevenue(orders: Order[], period: SalesPeriod): number {
+  const now = Date.now();
+  const cutoff = period === '7d' ? now - 7 * 86400_000 : period === '30d' ? now - 30 * 86400_000 : 0;
+  return orders
+    .filter((o) => o.stripeStatus === 'succeeded' && new Date(o.createdAt).getTime() >= cutoff)
+    .reduce((sum, o) => sum + parseFloat(o.totalCzk), 0);
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>('7d');
 
   // Section management state
   const [newSectionName, setNewSectionName] = useState('');
@@ -48,14 +74,19 @@ export default function AdminDashboardPage() {
     setSections(await res.json());
   }, []);
 
+  const fetchOrders = useCallback(async () => {
+    const res = await fetch('/api/orders');
+    setOrders(await res.json());
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchItems(), fetchSections()]);
+      await Promise.all([fetchItems(), fetchSections(), fetchOrders()]);
     } finally {
       setLoading(false);
     }
-  }, [fetchItems, fetchSections]);
+  }, [fetchItems, fetchSections, fetchOrders]);
 
   useEffect(() => {
     fetchAll();
@@ -113,6 +144,7 @@ export default function AdminDashboardPage() {
   }
 
   const active = items.filter((i) => i.isActive === 1).length;
+  const revenue = computeRevenue(orders, salesPeriod);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -145,9 +177,31 @@ export default function AdminDashboardPage() {
             <p className="font-body text-xs text-charcoal/50 uppercase tracking-wide">Celkem položek</p>
             <p className="font-display text-3xl text-charcoal mt-1">{items.length}</p>
           </div>
-          <div className="bg-warm-white rounded-xl border border-border p-4 col-span-2 sm:col-span-1">
-            <p className="font-body text-xs text-charcoal/50 uppercase tracking-wide">Tržby dnes</p>
-            <p className="font-display text-3xl text-charcoal/30 mt-1">—</p>
+          <div className="bg-warm-white rounded-xl border border-border p-4 col-span-2 sm:col-span-1 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-body text-xs text-charcoal/50 uppercase tracking-wide">Tržby</p>
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                {PERIODS.map((p) => (
+                  <button
+                    key={p.key}
+                    onClick={() => setSalesPeriod(p.key)}
+                    className={`font-body text-[10px] px-2 py-1 transition-colors ${
+                      salesPeriod === p.key
+                        ? 'bg-charcoal text-cream'
+                        : 'text-charcoal/50 hover:text-charcoal hover:bg-cream'
+                    }`}
+                  >
+                    {p.key === '7d' ? '7 dní' : p.key === '30d' ? '30 dní' : 'Celkem'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="font-display text-3xl text-charcoal">
+              {loading ? <span className="text-charcoal/30">—</span> : formatCZK(revenue)}
+            </p>
+            <p className="font-body text-xs text-charcoal/40">
+              {PERIODS.find((p) => p.key === salesPeriod)?.label}
+            </p>
           </div>
         </div>
 
