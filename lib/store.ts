@@ -1,7 +1,10 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// DATA_DIR can be set to a path outside the project directory so data
+// files survive git-based redeployments (e.g. on Hostinger set it to
+// an absolute path like /home/user/domecek-data).
+const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
 
 function ensureDataDir() {
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });

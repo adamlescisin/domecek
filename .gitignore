@@ -38,3 +38,6 @@ next-env.d.ts
 # PWA generated files
 /public/sw.js
 /public/workbox-*.js
+
+# Runtime data — managed by the app, must not be overwritten on deploy
+/data/*.json
