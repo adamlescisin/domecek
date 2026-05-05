@@ -14,6 +14,19 @@ const nextConfig = pwaConfig({
       { protocol: 'https', hostname: 'www.domecekujosefa.cz' },
     ],
   },
+  async headers() {
+    return [
+      {
+        // HTML pages must never be served from cache after a new deployment —
+        // stale HTML references old chunk hashes that no longer exist on the server.
+        // Exclude _next/static (immutable, content-hashed) and _next/image.
+        source: '/((?!_next/static|_next/image).*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache' },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
