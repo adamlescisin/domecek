@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { BasketProvider } from '@/lib/basket-context';
+import ChunkErrorRecovery from '@/components/ChunkErrorRecovery';
 
 export const metadata: Metadata = {
   title: 'Domeček u Josefa — Obchod',
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="cs">
       <body className="antialiased">
+        <ChunkErrorRecovery />
         <BasketProvider>{children}</BasketProvider>
       </body>
     </html>
