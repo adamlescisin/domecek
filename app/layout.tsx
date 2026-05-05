@@ -30,10 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             navigator.serviceWorker.getRegistrations().then(function(regs){
               if(!regs.length) return;
               Promise.all(regs.map(function(r){ return r.unregister(); })).then(function(){
-                if(!localStorage.getItem('_sw_cleared')){
-                  localStorage.setItem('_sw_cleared','1');
-                  location.reload();
-                }
+                location.reload();
               });
             });
           })();
