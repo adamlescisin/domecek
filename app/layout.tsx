@@ -21,6 +21,24 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="cs">
+      <head>
+        {/* Runs before any JS chunks load. If an old service worker is found,
+            unregister it and reload once so the browser fetches fresh HTML. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            if(!('serviceWorker' in navigator)) return;
+            navigator.serviceWorker.getRegistrations().then(function(regs){
+              if(!regs.length) return;
+              Promise.all(regs.map(function(r){ return r.unregister(); })).then(function(){
+                if(!localStorage.getItem('_sw_cleared')){
+                  localStorage.setItem('_sw_cleared','1');
+                  location.reload();
+                }
+              });
+            });
+          })();
+        `}} />
+      </head>
       <body className="antialiased">
         <ChunkErrorRecovery />
         <BasketProvider>{children}</BasketProvider>
