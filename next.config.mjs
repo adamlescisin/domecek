@@ -12,7 +12,7 @@ const nextConfig = {
         // old chunk hashes that no longer exist after a new deployment.
         source: '/((?!_next/static|_next/image).*)',
         headers: [
-          { key: 'Cache-Control', value: 'no-cache' },
+          { key: 'Cache-Control', value: 'no-store, must-revalidate' },
         ],
       },
     ];
