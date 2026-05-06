@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'Objednejte si služby Domečku u Josefa',
   manifest: '/manifest.json',
   appleWebApp: {
-    capable: true,
     statusBarStyle: 'default',
     title: 'DuJ Shop',
   },
@@ -25,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Silently unregister any old service workers left from PWA-enabled
             deployments. Does NOT reload — ChunkErrorRecovery handles reloads
             if a stale chunk is actually requested. */}
+        <meta name="mobile-web-app-capable" content="yes" />
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
             if(!('serviceWorker' in navigator)) return;
