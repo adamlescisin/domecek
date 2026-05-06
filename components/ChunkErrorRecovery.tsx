@@ -4,12 +4,6 @@ import { useEffect } from 'react';
 
 export default function ChunkErrorRecovery() {
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((reg) => reg.unregister());
-      });
-    }
-
     function handleError(event: ErrorEvent) {
       const isChunkError =
         event.message?.includes('ChunkLoadError') ||
@@ -24,9 +18,8 @@ export default function ChunkErrorRecovery() {
 
       sessionStorage.setItem('chunk_reload', String(retries + 1));
 
-      // Append a cache-buster query param so the browser requests fresh HTML
-      // from the server instead of serving the stale cached version that
-      // referenced the now-missing chunk files.
+      // Append a cache-buster so the browser requests fresh HTML instead of
+      // the stale cached version that referenced the now-missing chunk files.
       const url = new URL(window.location.href);
       url.searchParams.set('_bust', Date.now().toString());
       window.location.replace(url.toString());

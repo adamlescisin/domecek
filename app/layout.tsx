@@ -22,16 +22,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="cs">
       <head>
-        {/* Runs before any JS chunks load. If an old service worker is found,
-            unregister it and reload once so the browser fetches fresh HTML. */}
+        {/* Silently unregister any old service workers left from PWA-enabled
+            deployments. Does NOT reload — ChunkErrorRecovery handles reloads
+            if a stale chunk is actually requested. */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
             if(!('serviceWorker' in navigator)) return;
             navigator.serviceWorker.getRegistrations().then(function(regs){
-              if(!regs.length) return;
-              Promise.all(regs.map(function(r){ return r.unregister(); })).then(function(){
-                location.reload();
-              });
+              regs.forEach(function(r){ r.unregister(); });
             });
           })();
         `}} />

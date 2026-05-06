@@ -57,26 +57,47 @@ export default function AdminDashboardPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>('7d');
 
-  // Section management state
   const [newSectionName, setNewSectionName] = useState('');
   const [addingSection, setAddingSection] = useState(false);
   const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
   const [deleteSectionConfirm, setDeleteSectionConfirm] = useState<number | null>(null);
 
+  const redirectToLogin = useCallback(() => {
+    router.push('/admin/login');
+  }, [router]);
+
   const fetchItems = useCallback(async () => {
-    const res = await fetch('/api/items?admin=true');
-    setItems(await res.json());
-  }, []);
+    try {
+      const res = await fetch('/api/items?admin=true');
+      if (res.status === 401) { redirectToLogin(); return; }
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch {
+      setItems([]);
+    }
+  }, [redirectToLogin]);
 
   const fetchSections = useCallback(async () => {
-    const res = await fetch('/api/sections');
-    setSections(await res.json());
-  }, []);
+    try {
+      const res = await fetch('/api/sections');
+      if (res.status === 401) { redirectToLogin(); return; }
+      const data = await res.json();
+      setSections(Array.isArray(data) ? data : []);
+    } catch {
+      setSections([]);
+    }
+  }, [redirectToLogin]);
 
   const fetchOrders = useCallback(async () => {
-    const res = await fetch('/api/orders');
-    setOrders(await res.json());
+    try {
+      const res = await fetch('/api/orders');
+      if (!res.ok) { setOrders([]); return; }
+      const data = await res.json();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch {
+      setOrders([]);
+    }
   }, []);
 
   const fetchAll = useCallback(async () => {
@@ -127,7 +148,6 @@ export default function AdminDashboardPage() {
   }
 
   async function handleDeleteSection(id: number) {
-    // Move items in this section to null
     const sectionItems = items.filter((i) => i.sectionId === id);
     await Promise.all(
       sectionItems.map((item) =>
@@ -214,7 +234,7 @@ export default function AdminDashboardPage() {
                 Zatím žádné sekce. Přidejte první sekci níže.
               </p>
             )}
-            {sections.sort((a, b) => a.sortOrder - b.sortOrder).map((section) => (
+            {[...sections].sort((a, b) => a.sortOrder - b.sortOrder).map((section) => (
               <div key={section.id} className="flex items-center gap-2">
                 {editingSectionId === section.id ? (
                   <>

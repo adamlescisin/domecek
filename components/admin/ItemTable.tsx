@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Pencil, Trash2, FolderInput } from 'lucide-react';
 import ToggleSwitch from './ToggleSwitch';
 import ItemModal from './ItemModal';
@@ -62,7 +62,6 @@ export default function ItemTable({ items, sections, onRefresh }: ItemTableProps
     onRefresh();
   }
 
-  // Group items: sections in sortOrder, then unsectioned at end
   const sortedSections = [...sections].sort((a, b) => a.sortOrder - b.sortOrder);
   const groups: Array<{ sectionId: number | null; label: string; items: Item[] }> = [
     ...sortedSections.map((s) => ({
@@ -98,7 +97,6 @@ export default function ItemTable({ items, sections, onRefresh }: ItemTableProps
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center justify-center gap-1">
-            {/* Move to section dropdown */}
             {sections.length > 0 && (
               <div className="relative group">
                 <button
@@ -172,12 +170,11 @@ export default function ItemTable({ items, sections, onRefresh }: ItemTableProps
                 </td>
               </tr>
             ) : groups.length === 1 && groups[0].sectionId === null ? (
-              // No sections defined – flat list
               groups[0].items.map(renderRow)
             ) : (
               groups.map((group) => (
-                <>
-                  <tr key={`section-${group.sectionId}`} className="bg-cream/70 border-b border-border">
+                <Fragment key={group.sectionId ?? 'unsectioned'}>
+                  <tr className="bg-cream/70 border-b border-border">
                     <td
                       colSpan={4}
                       className="px-4 py-2 font-body text-xs font-semibold text-charcoal/50 uppercase tracking-widest"
@@ -186,7 +183,7 @@ export default function ItemTable({ items, sections, onRefresh }: ItemTableProps
                     </td>
                   </tr>
                   {group.items.map(renderRow)}
-                </>
+                </Fragment>
               ))
             )}
           </tbody>

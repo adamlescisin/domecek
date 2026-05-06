@@ -44,6 +44,17 @@ interface Section {
   sortOrder: number;
 }
 
+async function fetchJson<T>(url: string, fallback: T): Promise<T> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    return Array.isArray(fallback) ? (Array.isArray(data) ? data : fallback) : data;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function ShopPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
@@ -55,16 +66,21 @@ export default function ShopPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
   const [success, setSuccess] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const { count, items: basketItems, clearBasket } = useBasket();
 
   useEffect(() => {
+    setFetchError(false);
     Promise.all([
-      fetch('/api/items').then((r) => r.json()),
-      fetch('/api/sections').then((r) => r.json()),
-    ]).then(([fetchedItems, fetchedSections]) => {
-      setItems(fetchedItems);
-      setSections(fetchedSections);
-    }).finally(() => setLoading(false));
+      fetchJson<Item[]>('/api/items', []),
+      fetchJson<Section[]>('/api/sections', []),
+    ])
+      .then(([fetchedItems, fetchedSections]) => {
+        setItems(fetchedItems);
+        setSections(fetchedSections);
+      })
+      .catch(() => setFetchError(true))
+      .finally(() => setLoading(false));
   }, []);
 
   function handleCheckout() {
@@ -81,17 +97,29 @@ export default function ShopPage() {
       return;
     }
     setEmailError('');
-    const res = await fetch('/api/stripe/create-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        items: basketItems.map((i) => ({ id: i.id, quantity: i.quantity })),
-        email: trimmed,
-      }),
-    });
-    const data = await res.json();
-    setClientSecret(data.clientSecret);
-    setCheckoutTotal(data.total);
+    try {
+      const res = await fetch('/api/stripe/create-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: basketItems.map((i) => ({ id: i.id, quantity: i.quantity })),
+          email: trimmed,
+        }),
+      });
+      if (!res.ok) {
+        setEmailError('Chyba při vytváření platby. Zkuste to znovu.');
+        return;
+      }
+      const data = await res.json();
+      if (!data.clientSecret) {
+        setEmailError('Chyba při vytváření platby. Zkuste to znovu.');
+        return;
+      }
+      setClientSecret(data.clientSecret);
+      setCheckoutTotal(data.total);
+    } catch {
+      setEmailError('Chyba připojení. Zkuste to znovu.');
+    }
   }
 
   function handleSuccess() {
@@ -102,7 +130,6 @@ export default function ShopPage() {
     setSuccess(true);
   }
 
-  // Build grouped display
   const sortedSections = [...sections].sort((a, b) => a.sortOrder - b.sortOrder);
   const groups: Array<{ sectionId: number | null; label: string | null; items: Item[] }> = [
     ...sortedSections.map((s) => ({
@@ -154,8 +181,14 @@ export default function ShopPage() {
           <div className="flex justify-center py-16">
             <LoadingSpinner className="w-8 h-8" />
           </div>
+        ) : fetchError ? (
+          <div className="flex flex-col items-center py-16 gap-4 text-center">
+            <p className="font-body text-charcoal/60">Nepodařilo se načíst položky. Zkuste obnovit stránku.</p>
+            <Button variant="ghost" onClick={() => window.location.reload()}>Obnovit</Button>
+          </div>
+        ) : groups.length === 0 ? (
+          <p className="font-body text-charcoal/50 py-16 text-center">Momentálně nejsou k dispozici žádné položky.</p>
         ) : groups.length === 1 && groups[0].label === null ? (
-          // No sections – flat grid
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {groups[0].items.map((item) => (
               <ItemCard key={item.id} item={item} />
