@@ -49,7 +49,7 @@ async function fetchJson<T>(url: string, fallback: T): Promise<T> {
     const res = await fetch(url);
     if (!res.ok) return fallback;
     const data = await res.json();
-    return Array.isArray(fallback) ? (Array.isArray(data) ? data : fallback) : data;
+    return (Array.isArray(fallback) ? (Array.isArray(data) ? data : fallback) : data) as T;
   } catch {
     return fallback;
   }
