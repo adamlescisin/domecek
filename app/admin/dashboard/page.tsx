@@ -163,13 +163,18 @@ export default function AdminDashboardPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchItems(), fetchSections(), fetchOrders(), fetchLanguages(), fetchUiTranslations()]);
+      await Promise.all([fetchItems(), fetchSections(), fetchOrders(), fetchLanguages()]);
     } finally {
       setLoading(false);
     }
-  }, [fetchItems, fetchSections, fetchOrders, fetchLanguages, fetchUiTranslations]);
+  }, [fetchItems, fetchSections, fetchOrders, fetchLanguages]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  // fetchUiTranslations is intentionally NOT in fetchAll — it should only load once on mount
+  // and after an explicit save, so in-progress edits are never overwritten by unrelated refreshes.
+  useEffect(() => {
+    fetchAll();
+    fetchUiTranslations();
+  }, [fetchAll, fetchUiTranslations]);
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -276,8 +281,14 @@ export default function AdminDashboardPage() {
       });
       if (!res.ok) {
         alert('Nepodařilo se uložit překlady rozhraní.');
+      } else {
+        await fetchUiTranslations();
       }
-    } finally { setSavingUiTrans(false); }
+    } catch {
+      alert('Nepodařilo se uložit překlady rozhraní.');
+    } finally {
+      setSavingUiTrans(false);
+    }
   }
 
   async function handleDeleteLang(idx: number) {
