@@ -494,7 +494,7 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              {languages.length === 0 && !isEditingLang && (
+              {languages.length === 0 && !showLangForm && (
                 <div className="bg-warm-white rounded-xl border border-border p-6 text-center">
                   <p className="font-body text-sm text-charcoal/40">Zatím žádné cizí jazyky.</p>
                 </div>
