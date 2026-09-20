@@ -21,7 +21,7 @@ interface OrderEmailData {
 
 interface EmailStrings {
   subject: string;
-  greeting: (name: string) => string;
+  greeting: string;
   paymentSuccess: string;
   colItem: string;
   colQty: string;
@@ -34,7 +34,7 @@ interface EmailStrings {
 const EMAIL_STRINGS: Record<string, EmailStrings> = {
   cs: {
     subject: 'Děkujeme za vaši objednávku — Domeček u Josefa',
-    greeting: (name) => `Děkujeme, ${name}!`,
+    greeting: `Děkujeme!`,
     paymentSuccess: 'Vaše platba proběhla úspěšně.',
     colItem: 'Položka',
     colQty: 'Počet',
@@ -45,7 +45,7 @@ const EMAIL_STRINGS: Record<string, EmailStrings> = {
   },
   en: {
     subject: 'Thank you for your order — Domeček u Josefa',
-    greeting: (name) => `Thank you, ${name}!`,
+    greeting: `Thank you!`,
     paymentSuccess: 'Your payment was successful.',
     colItem: 'Item',
     colQty: 'Qty',
@@ -56,7 +56,7 @@ const EMAIL_STRINGS: Record<string, EmailStrings> = {
   },
   de: {
     subject: 'Vielen Dank für Ihre Bestellung — Domeček u Josefa',
-    greeting: (name) => `Vielen Dank, ${name}!`,
+    greeting: `Danke!`,
     paymentSuccess: 'Ihre Zahlung war erfolgreich.',
     colItem: 'Artikel',
     colQty: 'Menge',
@@ -67,7 +67,7 @@ const EMAIL_STRINGS: Record<string, EmailStrings> = {
   },
   sk: {
     subject: 'Ďakujeme za vašu objednávku — Domeček u Josefa',
-    greeting: (name) => `Ďakujeme, ${name}!`,
+    greeting: `Ďakujeme!`,
     paymentSuccess: 'Vaša platba prebehla úspešne.',
     colItem: 'Položka',
     colQty: 'Počet',
@@ -118,7 +118,7 @@ export async function sendCustomerReceipt(data: OrderEmailData) {
           <img src="https://www.domecekujosefa.cz/wp-content/uploads/2021/10/DUJ_logo_black_2.png" alt="Domeček u Josefa" height="48" style="filter:invert(1)">
         </td></tr>
         <tr><td style="padding:40px">
-          <h1 style="font-family:Georgia,serif;color:#1C1C1A;margin:0 0 8px">${s.greeting(customerName)}</h1>
+          <h1 style="font-family:Georgia,serif;color:#1C1C1A;margin:0 0 8px">${s.greeting}</h1>
           <p style="color:#5C4033;margin:0 0 32px">${s.paymentSuccess}</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E0D8CE;border-radius:8px;overflow:hidden">
             <thead><tr style="background:#F7F3EE">
