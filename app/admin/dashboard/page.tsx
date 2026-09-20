@@ -100,6 +100,7 @@ export default function AdminDashboardPage() {
   // Language editing
   const [editLang, setEditLang] = useState<Language>(emptyLang);
   const [editLangIdx, setEditLangIdx] = useState<number | null>(null);
+  const [showLangForm, setShowLangForm] = useState(false);
   const [savingLang, setSavingLang] = useState(false);
   const [deleteLangConfirm, setDeleteLangConfirm] = useState<number | null>(null);
 
@@ -207,11 +208,13 @@ export default function AdminDashboardPage() {
   function openAddLang() {
     setEditLang(emptyLang);
     setEditLangIdx(null);
+    setShowLangForm(true);
   }
 
   function openEditLang(idx: number) {
     setEditLang({ ...languages[idx] });
     setEditLangIdx(idx);
+    setShowLangForm(true);
   }
 
   async function handleSaveLang() {
@@ -232,6 +235,7 @@ export default function AdminDashboardPage() {
       setLanguages(updated);
       setEditLangIdx(null);
       setEditLang(emptyLang);
+      setShowLangForm(false);
     } finally { setSavingLang(false); }
   }
 
@@ -248,7 +252,6 @@ export default function AdminDashboardPage() {
 
   const active = items.filter((i) => i.isActive === 1).length;
   const revenue = computeRevenue(orders, salesPeriod);
-  const isEditingLang = editLangIdx !== null || editLang.code !== '' || editLang.name !== '';
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'polozky',    label: 'Položky' },
@@ -525,7 +528,7 @@ export default function AdminDashboardPage() {
               ))}
 
               {/* Add / edit language form */}
-              {isEditingLang ? (
+              {showLangForm ? (
                 <div className="bg-warm-white rounded-xl border border-charcoal/20 p-5 flex flex-col gap-4">
                   <h3 className="font-body text-sm font-semibold text-charcoal">
                     {editLangIdx !== null ? 'Upravit jazyk' : 'Přidat jazyk'}
@@ -572,7 +575,7 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                   <div className="flex gap-3 justify-end">
-                    <Button variant="ghost" onClick={() => { setEditLang(emptyLang); setEditLangIdx(null); }}>Zrušit</Button>
+                    <Button variant="ghost" onClick={() => { setEditLang(emptyLang); setEditLangIdx(null); setShowLangForm(false); }}>Zrušit</Button>
                     <Button onClick={handleSaveLang} loading={savingLang}
                       disabled={!editLang.code.trim() || !editLang.name.trim() || !editLang.currency.trim()}>
                       Uložit jazyk
