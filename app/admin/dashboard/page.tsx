@@ -110,6 +110,10 @@ export default function AdminDashboardPage() {
   const [uiTransLang, setUiTransLang] = useState<string>('');
   const [savingUiTrans, setSavingUiTrans] = useState(false);
 
+  // Section translations: { langCode: { sectionId: translatedName } }
+  const [sectionTrans, setSectionTrans] = useState<Record<string, Record<number, string>>>({});
+  const [savingSectionTrans, setSavingSectionTrans] = useState(false);
+
   const redirectToLogin = useCallback(() => { router.push('/admin/login'); }, [router]);
 
   const fetchItems = useCallback(async () => {
@@ -158,6 +162,21 @@ export default function AdminDashboardPage() {
       if (val && typeof val === 'object' && !Array.isArray(val)) {
         setUiTranslations(val);
       }
+    } catch { /* ignore */ }
+  }, []);
+
+  const fetchSectionTranslations = useCallback(async (langCode: string) => {
+    try {
+      const res = await fetch(`/api/translations?lang=${langCode}`);
+      if (!res.ok) return;
+      const rows: { entityType: string; entityId: number; field: string; value: string }[] = await res.json();
+      const byId: Record<number, string> = {};
+      for (const row of rows) {
+        if (row.entityType === 'section' && row.field === 'name') {
+          byId[row.entityId] = row.value;
+        }
+      }
+      setSectionTrans((prev) => ({ ...prev, [langCode]: byId }));
     } catch { /* ignore */ }
   }, []);
 
@@ -272,6 +291,11 @@ export default function AdminDashboardPage() {
     if (languages.length > 0 && !uiTransLang) setUiTransLang(languages[0].code);
   }, [languages, uiTransLang]);
 
+  // Load section translations whenever the active language tab changes
+  useEffect(() => {
+    if (uiTransLang) fetchSectionTranslations(uiTransLang);
+  }, [uiTransLang, fetchSectionTranslations]);
+
   async function handleSaveUiTrans() {
     setSavingUiTrans(true);
     try {
@@ -289,6 +313,34 @@ export default function AdminDashboardPage() {
       alert('Nepodařilo se uložit překlady rozhraní.');
     } finally {
       setSavingUiTrans(false);
+    }
+  }
+
+  async function handleSaveSectionTrans() {
+    if (!uiTransLang || sections.length === 0) return;
+    setSavingSectionTrans(true);
+    try {
+      const byId = sectionTrans[uiTransLang] ?? {};
+      await Promise.all(
+        sections.map((section) =>
+          fetch('/api/translations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              entityType: 'section',
+              entityId: section.id,
+              langCode: uiTransLang,
+              field: 'name',
+              value: byId[section.id] ?? '',
+            }),
+          })
+        )
+      );
+      await fetchSectionTranslations(uiTransLang);
+    } catch {
+      alert('Nepodařilo se uložit překlady sekcí.');
+    } finally {
+      setSavingSectionTrans(false);
     }
   }
 
@@ -697,6 +749,65 @@ export default function AdminDashboardPage() {
                     <div className="flex justify-end pt-2">
                       <Button onClick={handleSaveUiTrans} loading={savingUiTrans} size="sm">
                         Uložit překlady
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Section translations */}
+            {languages.length > 0 && sections.length > 0 && (
+              <div className="flex flex-col gap-4 pt-2 border-t border-border">
+                <div className="flex flex-col gap-1">
+                  <h3 className="font-display text-lg font-semibold text-charcoal">Překlady sekcí</h3>
+                  <p className="font-body text-sm text-charcoal/50">
+                    Přeložte názvy sekcí pro každý jazyk.
+                  </p>
+                </div>
+
+                <div className="flex gap-1 border-b border-border">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => setUiTransLang(lang.code)}
+                      className={`font-body text-sm px-3 py-2 border-b-2 transition-colors ${
+                        uiTransLang === lang.code
+                          ? 'border-charcoal text-charcoal font-medium'
+                          : 'border-transparent text-charcoal/50 hover:text-charcoal'
+                      }`}
+                    >
+                      {lang.name}
+                    </button>
+                  ))}
+                </div>
+
+                {uiTransLang && (
+                  <div className="bg-warm-white rounded-xl border border-border p-5 flex flex-col gap-3">
+                    <div className="flex flex-col gap-3">
+                      {sections.map((section) => (
+                        <div key={section.id} className="flex flex-col gap-1">
+                          <label className="font-body text-xs text-charcoal/50">
+                            {section.name}
+                          </label>
+                          <input
+                            value={sectionTrans[uiTransLang]?.[section.id] ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSectionTrans((prev) => ({
+                                ...prev,
+                                [uiTransLang]: { ...prev[uiTransLang], [section.id]: val },
+                              }));
+                            }}
+                            placeholder={section.name}
+                            className="px-3 py-1.5 rounded-lg border border-border bg-cream font-body text-sm text-charcoal placeholder:text-charcoal/30 focus:outline-none focus:ring-2 focus:ring-charcoal/20"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button onClick={handleSaveSectionTrans} loading={savingSectionTrans} size="sm">
+                        Uložit překlady sekcí
                       </Button>
                     </div>
                   </div>
