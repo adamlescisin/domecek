@@ -185,6 +185,7 @@ export default function ShopPage() {
         body: JSON.stringify({
           items: basketItems.map((i) => ({ id: i.id, quantity: i.quantity })),
           email: trimmed,
+          lang: activeLang,
         }),
       });
       if (!res.ok) { setEmailError(t('connection_error')); return; }

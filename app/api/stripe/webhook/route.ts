@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     const totalCzk = pi.amount / 100;
     const customerEmail = pi.receipt_email ?? pi.metadata?.customer_email ?? pi.charges?.data?.[0]?.billing_details?.email ?? '';
     const customerName = pi.charges?.data?.[0]?.billing_details?.name ?? 'Zákazník';
+    const lang = pi.metadata?.lang ?? 'cs';
     const now = new Date();
 
     await upsertOrder({
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
       totalCzk,
       stripePaymentId: pi.id,
       createdAt: now.toLocaleString('cs-CZ'),
+      lang,
     };
 
     await Promise.allSettled([
