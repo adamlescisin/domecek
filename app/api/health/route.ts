@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getItems, getOrders, DATA_DIR } from '@/lib/store';
 import { existsSync, writeFileSync, unlinkSync } from 'fs';
 import path from 'path';
+import os from 'os';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,7 @@ export async function GET() {
       orders: orders.length,
       env: {
         DATA_DIR: process.env.DATA_DIR ?? '(not set — using os.homedir)',
+        os_homedir: os.homedir(),
         ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
         JWT_SECRET: !!process.env.JWT_SECRET,
         STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
@@ -47,6 +49,7 @@ export async function GET() {
         error: e.message,
         env: {
           DATA_DIR: process.env.DATA_DIR ?? '(not set — using os.homedir)',
+          os_homedir: os.homedir(),
           ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
           JWT_SECRET: !!process.env.JWT_SECRET,
           STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,

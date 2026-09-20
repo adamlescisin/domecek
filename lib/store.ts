@@ -8,10 +8,24 @@ import os from 'os';
 //   3. ../domecek-data relative to process.cwd() — one level above the app
 //      root, always writable in Hostinger's Node.js sandbox even when the
 //      sandbox home (/home/sbx_userXXX) does not exist.
+function isDirWritable(dir: string): boolean {
+  try {
+    const { accessSync, constants } = require('fs') as typeof import('fs');
+    accessSync(dir, constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function resolveDataDir(): string {
   if (process.env.DATA_DIR) return path.resolve(process.env.DATA_DIR);
   const homeDir = os.homedir();
-  if (existsSync(homeDir)) return path.join(homeDir, 'domecek-data');
+  // Only use the home-dir path when the home dir exists AND is writable.
+  // On Hostinger's sandbox os.homedir() can return /var or a path the
+  // process cannot write to.
+  if (existsSync(homeDir) && isDirWritable(homeDir)) return path.join(homeDir, 'domecek-data');
+  // Fall back to one level above the app root, which the sandbox process owns.
   return path.resolve(process.cwd(), '..', 'domecek-data');
 }
 
