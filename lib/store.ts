@@ -179,7 +179,13 @@ export async function getSettings(key: string): Promise<unknown | null> {
     .select()
     .from(settingsTable)
     .where(eq(settingsTable.key, key));
-  return rows.length ? rows[0].value : null;
+  if (!rows.length) return null;
+  const raw = rows[0].value;
+  // mysql2 may return JSON columns as a string; parse if so
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return raw; }
+  }
+  return raw;
 }
 
 export async function upsertSettings(key: string, value: unknown): Promise<void> {

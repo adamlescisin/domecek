@@ -144,8 +144,8 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/settings?key=languages');
       if (!res.ok) return;
       const data = await res.json();
-      if (Array.isArray(data.value)) setLanguages(data.value);
-      // Don't clear if null — language may be in local state pending a DB save
+      const val = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      if (Array.isArray(val)) setLanguages(val);
     } catch { /* ignore */ }
   }, []);
 
@@ -154,8 +154,9 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/settings?key=ui_translations');
       if (!res.ok) return;
       const data = await res.json();
-      if (data.value && typeof data.value === 'object' && !Array.isArray(data.value)) {
-        setUiTranslations(data.value);
+      const val = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        setUiTranslations(val);
       }
     } catch { /* ignore */ }
   }, []);

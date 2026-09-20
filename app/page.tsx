@@ -108,9 +108,11 @@ export default function ShopPage() {
       .then(([fetchedItems, fetchedSections, settingsData, uiTransData]) => {
         setItems(fetchedItems);
         setSections(fetchedSections);
-        setLanguages(Array.isArray(settingsData?.value) ? settingsData.value : []);
-        if (uiTransData?.value && typeof uiTransData.value === 'object' && !Array.isArray(uiTransData.value)) {
-          setUiTranslations(uiTransData.value);
+        const langVal = typeof settingsData?.value === 'string' ? JSON.parse(settingsData.value) : settingsData?.value;
+        setLanguages(Array.isArray(langVal) ? langVal : []);
+        const uiVal = typeof uiTransData?.value === 'string' ? JSON.parse(uiTransData.value) : uiTransData?.value;
+        if (uiVal && typeof uiVal === 'object' && !Array.isArray(uiVal)) {
+          setUiTranslations(uiVal);
         }
       })
       .catch(() => setFetchError(true))
