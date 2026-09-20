@@ -86,7 +86,7 @@ function formatCZK(amount: number) {
   return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0 }).format(amount);
 }
 
-function itemRows(items: LineItem[], _s: EmailStrings) {
+function itemRows(items: LineItem[]) {
   return items
     .map(
       (i) => `<tr>
@@ -127,7 +127,7 @@ export async function sendCustomerReceipt(data: OrderEmailData) {
               <th style="padding:8px 12px;text-align:right;font-size:12px;color:#5C4033;text-transform:uppercase">${s.colPrice}</th>
               <th style="padding:8px 12px;text-align:right;font-size:12px;color:#5C4033;text-transform:uppercase">${s.colTotal}</th>
             </tr></thead>
-            <tbody>${itemRows(lineItems, s)}</tbody>
+            <tbody>${itemRows(lineItems)}</tbody>
             <tfoot><tr style="background:#F7F3EE">
               <td colspan="3" style="padding:12px;font-weight:bold;text-align:right">${s.totalLabel}</td>
               <td style="padding:12px;font-weight:bold;text-align:right;color:#1C1C1A">${formatCZK(totalCzk)}</td>
