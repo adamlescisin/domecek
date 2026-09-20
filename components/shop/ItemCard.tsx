@@ -11,7 +11,7 @@ interface Item {
   priceCzk: string;
 }
 
-export default function ItemCard({ item, priceDisplay }: { item: Item; priceDisplay?: string }) {
+export default function ItemCard({ item, priceDisplay, addLabel = 'Přidat' }: { item: Item; priceDisplay?: string; addLabel?: string }) {
   const { items, addItem, updateQuantity } = useBasket();
   const basketItem = items.find((i) => i.id === item.id);
   const qty = basketItem?.quantity ?? 0;
@@ -38,7 +38,7 @@ export default function ItemCard({ item, priceDisplay }: { item: Item; priceDisp
             className="flex items-center gap-2 bg-charcoal text-cream font-body text-sm font-medium px-4 py-2 rounded-xl hover:bg-brown transition-colors"
           >
             <Plus size={16} />
-            Přidat
+            {addLabel}
           </button>
         ) : (
           <div className="flex items-center gap-2 border border-border rounded-xl overflow-hidden">

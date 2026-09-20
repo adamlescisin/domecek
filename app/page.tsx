@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Globe } from 'lucide-react';
 import { loadStripe, type Appearance } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { useBasket } from '@/lib/basket-context';
 import { formatCZK } from '@/lib/utils';
+import { DEFAULT_STRINGS, type UiStrings } from '@/lib/ui-text';
 import Logo from '@/components/ui/Logo';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -82,6 +83,8 @@ export default function ShopPage() {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [activeLang, setActiveLang] = useState<string>('cs');
   const [translations, setTranslations] = useState<Translation[]>([]);
+  const [uiTranslations, setUiTranslations] = useState<Record<string, Partial<UiStrings>>>({});
+  const [langOpen, setLangOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [basketOpen, setBasketOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -92,6 +95,7 @@ export default function ShopPage() {
   const [success, setSuccess] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const { count, items: basketItems, clearBasket } = useBasket();
+  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setFetchError(false);
@@ -99,32 +103,51 @@ export default function ShopPage() {
       fetchJson<Item[]>('/api/items', []),
       fetchJson<Section[]>('/api/sections', []),
       fetchJson<{ key: string; value: Language[] | null }>('/api/settings?key=languages', { key: 'languages', value: null }),
+      fetchJson<{ key: string; value: Record<string, Partial<UiStrings>> | null }>('/api/settings?key=ui_translations', { key: 'ui_translations', value: null }),
     ])
-      .then(([fetchedItems, fetchedSections, settingsData]) => {
+      .then(([fetchedItems, fetchedSections, settingsData, uiTransData]) => {
         setItems(fetchedItems);
         setSections(fetchedSections);
-        const langs = Array.isArray(settingsData?.value) ? settingsData.value : [];
-        setLanguages(langs);
+        setLanguages(Array.isArray(settingsData?.value) ? settingsData.value : []);
+        if (uiTransData?.value && typeof uiTransData.value === 'object' && !Array.isArray(uiTransData.value)) {
+          setUiTranslations(uiTransData.value);
+        }
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, []);
 
-  // Load translations when language changes
+  // Close language dropdown on outside click
   useEffect(() => {
-    if (activeLang === 'cs') {
-      setTranslations([]);
-      return;
+    function handleClickOutside(e: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
     }
+    if (langOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [langOpen]);
+
+  // Load item/section translations when language changes
+  useEffect(() => {
+    if (activeLang === 'cs') { setTranslations([]); return; }
     fetchJson<Translation[]>(`/api/translations?lang=${activeLang}`, []).then(setTranslations);
   }, [activeLang]);
 
+  function t(key: keyof UiStrings): string {
+    if (activeLang !== 'cs') {
+      const val = uiTranslations[activeLang]?.[key];
+      if (val) return val;
+    }
+    return DEFAULT_STRINGS[key];
+  }
+
   function getTranslation(entityType: string, entityId: number, field: string): string | null {
     if (activeLang === 'cs') return null;
-    const t = translations.find(
-      (t) => t.entityType === entityType && t.entityId === entityId && t.field === field
+    const tr = translations.find(
+      (tr) => tr.entityType === entityType && tr.entityId === entityId && tr.field === field
     );
-    return t?.value ?? null;
+    return tr?.value ?? null;
   }
 
   function translateItem(item: Item) {
@@ -136,10 +159,7 @@ export default function ShopPage() {
   }
 
   function translateSection(section: Section) {
-    return {
-      ...section,
-      name: getTranslation('section', section.id, 'name') ?? section.name,
-    };
+    return { ...section, name: getTranslation('section', section.id, 'name') ?? section.name };
   }
 
   function handleCheckout() {
@@ -152,7 +172,7 @@ export default function ShopPage() {
     e.preventDefault();
     const trimmed = email.trim();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setEmailError('Zadejte platnou e-mailovou adresu');
+      setEmailError(t('email_error'));
       return;
     }
     setEmailError('');
@@ -165,19 +185,13 @@ export default function ShopPage() {
           email: trimmed,
         }),
       });
-      if (!res.ok) {
-        setEmailError('Chyba při vytváření platby. Zkuste to znovu.');
-        return;
-      }
+      if (!res.ok) { setEmailError(t('connection_error')); return; }
       const data = await res.json();
-      if (!data.clientSecret) {
-        setEmailError('Chyba při vytváření platby. Zkuste to znovu.');
-        return;
-      }
+      if (!data.clientSecret) { setEmailError(t('connection_error')); return; }
       setClientSecret(data.clientSecret);
       setCheckoutTotal(data.total);
     } catch {
-      setEmailError('Chyba připojení. Zkuste to znovu.');
+      setEmailError(t('connection_error'));
     }
   }
 
@@ -187,6 +201,11 @@ export default function ShopPage() {
     setClientSecret(null);
     setEmail('');
     setSuccess(true);
+  }
+
+  function selectLang(code: string) {
+    setActiveLang(code);
+    setLangOpen(false);
   }
 
   const activeLangObj = languages.find((l) => l.code === activeLang) ?? null;
@@ -201,13 +220,15 @@ export default function ShopPage() {
     })),
     {
       sectionId: null,
-      label: sortedSections.length > 0 ? 'Ostatní' : null,
+      label: sortedSections.length > 0 ? t('other_section') : null,
       items: items.filter((i) => i.sectionId == null).map(translateItem),
     },
   ].filter((g) => g.items.length > 0);
 
   const priceDisplay = (item: Item) =>
     activeLangObj ? formatForeign(item.priceCzk, activeLangObj) : formatCZK(item.priceCzk);
+
+  const currentStrings: Partial<UiStrings> = activeLang !== 'cs' ? (uiTranslations[activeLang] ?? {}) : {};
 
   return (
     <div className="min-h-screen bg-cream">
@@ -218,41 +239,45 @@ export default function ShopPage() {
           <div className="flex items-center gap-3">
             {/* Language switcher */}
             {languages.length > 0 && (
-              <div className="relative group">
+              <div className="relative" ref={langRef}>
                 <button
+                  onClick={() => setLangOpen((o) => !o)}
                   className="flex items-center gap-1.5 font-body text-sm text-charcoal/60 hover:text-charcoal transition-colors"
                   aria-label="Změnit jazyk"
+                  aria-expanded={langOpen}
                 >
                   <Globe size={16} />
                   <span className="hidden sm:inline uppercase text-xs">{activeLang}</span>
                 </button>
-                <div className="absolute right-0 top-full mt-1 z-10 hidden group-focus-within:block group-hover:block bg-warm-white border border-border rounded-xl shadow-lg min-w-[140px] py-1">
-                  <button
-                    onClick={() => setActiveLang('cs')}
-                    className={`w-full text-left px-3 py-2 font-body text-sm transition-colors ${
-                      activeLang === 'cs' ? 'text-charcoal font-medium' : 'text-charcoal/60 hover:bg-cream'
-                    }`}
-                  >
-                    Čeština (CZK)
-                  </button>
-                  {languages.map((lang) => (
+                {langOpen && (
+                  <div className="absolute right-0 top-full mt-1 z-10 bg-warm-white border border-border rounded-xl shadow-lg min-w-[140px] py-1">
                     <button
-                      key={lang.code}
-                      onClick={() => setActiveLang(lang.code)}
+                      onClick={() => selectLang('cs')}
                       className={`w-full text-left px-3 py-2 font-body text-sm transition-colors ${
-                        activeLang === lang.code ? 'text-charcoal font-medium' : 'text-charcoal/60 hover:bg-cream'
+                        activeLang === 'cs' ? 'text-charcoal font-medium' : 'text-charcoal/60 hover:bg-cream'
                       }`}
                     >
-                      {lang.name} ({lang.currency})
+                      Čeština (CZK)
                     </button>
-                  ))}
-                </div>
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => selectLang(lang.code)}
+                        className={`w-full text-left px-3 py-2 font-body text-sm transition-colors ${
+                          activeLang === lang.code ? 'text-charcoal font-medium' : 'text-charcoal/60 hover:bg-cream'
+                        }`}
+                      >
+                        {lang.name} ({lang.currency})
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <button
               onClick={() => setBasketOpen(true)}
               className="flex items-center gap-2 font-body text-sm font-medium text-charcoal hover:text-brown transition-colors"
-              aria-label={`Košík (${count} položek)`}
+              aria-label={`${t('basket_btn')} (${count})`}
             >
               <div className="relative">
                 <ShoppingBag size={22} />
@@ -262,7 +287,7 @@ export default function ShopPage() {
                   </span>
                 )}
               </div>
-              <span className="hidden sm:inline">Košík {count > 0 ? `(${count})` : ''}</span>
+              <span className="hidden sm:inline">{t('basket_btn')} {count > 0 ? `(${count})` : ''}</span>
             </button>
           </div>
         </div>
@@ -271,10 +296,8 @@ export default function ShopPage() {
       {/* Main content */}
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-semibold text-charcoal mb-2">Vyberte si služby</h1>
-          <p className="font-body text-charcoal/60">
-            Přidejte položky do košíku a plaťte kartou, Apple Pay nebo Google Pay.
-          </p>
+          <h1 className="font-display text-3xl font-semibold text-charcoal mb-2">{t('page_title')}</h1>
+          <p className="font-body text-charcoal/60">{t('page_subtitle')}</p>
         </div>
 
         {loading ? (
@@ -283,15 +306,15 @@ export default function ShopPage() {
           </div>
         ) : fetchError ? (
           <div className="flex flex-col items-center py-16 gap-4 text-center">
-            <p className="font-body text-charcoal/60">Nepodařilo se načíst položky. Zkuste obnovit stránku.</p>
-            <Button variant="ghost" onClick={() => window.location.reload()}>Obnovit</Button>
+            <p className="font-body text-charcoal/60">{t('load_error')}</p>
+            <Button variant="ghost" onClick={() => window.location.reload()}>{t('refresh_btn')}</Button>
           </div>
         ) : groups.length === 0 ? (
-          <p className="font-body text-charcoal/50 py-16 text-center">Momentálně nejsou k dispozici žádné položky.</p>
+          <p className="font-body text-charcoal/50 py-16 text-center">{t('no_items')}</p>
         ) : groups.length === 1 && groups[0].label === null ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {groups[0].items.map((item) => (
-              <ItemCard key={item.id} item={item} priceDisplay={priceDisplay(item)} />
+              <ItemCard key={item.id} item={item} priceDisplay={priceDisplay(item)} addLabel={t('add_btn')} />
             ))}
           </div>
         ) : (
@@ -305,7 +328,7 @@ export default function ShopPage() {
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {group.items.map((item) => (
-                    <ItemCard key={item.id} item={item} priceDisplay={priceDisplay(item)} />
+                    <ItemCard key={item.id} item={item} priceDisplay={priceDisplay(item)} addLabel={t('add_btn')} />
                   ))}
                 </div>
               </section>
@@ -319,17 +342,18 @@ export default function ShopPage() {
         open={basketOpen}
         onClose={() => setBasketOpen(false)}
         onCheckout={handleCheckout}
+        strings={currentStrings}
       />
 
       {/* Checkout modal */}
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm">
           <div className="bg-warm-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 flex flex-col gap-5">
-            <h2 className="font-display text-xl font-semibold text-charcoal">Platba</h2>
+            <h2 className="font-display text-xl font-semibold text-charcoal">{t('payment_title')}</h2>
 
             {/* Order summary */}
             <div className="border border-border rounded-xl p-4">
-              <p className="font-body text-sm text-charcoal/60 mb-3">Shrnutí objednávky</p>
+              <p className="font-body text-sm text-charcoal/60 mb-3">{t('order_summary')}</p>
               {basketItems.map((i) => (
                 <div key={i.id} className="flex justify-between font-body text-sm text-charcoal py-1">
                   <span>{i.name} × {i.quantity}</span>
@@ -338,7 +362,7 @@ export default function ShopPage() {
               ))}
               {clientSecret && (
                 <div className="border-t border-border mt-2 pt-2 flex justify-between font-body font-medium text-charcoal">
-                  <span>Celkem</span>
+                  <span>{t('total')}</span>
                   <span>{formatCZK(checkoutTotal)}</span>
                 </div>
               )}
@@ -350,8 +374,8 @@ export default function ShopPage() {
                 <Input
                   id="checkout-email"
                   type="email"
-                  label="E-mail pro potvrzení objednávky"
-                  placeholder="vas@email.cz"
+                  label={t('email_label')}
+                  placeholder={t('email_placeholder')}
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
                   error={emailError}
@@ -359,7 +383,7 @@ export default function ShopPage() {
                   autoComplete="email"
                 />
                 <Button type="submit" size="lg" className="w-full">
-                  Pokračovat k platbě
+                  {t('continue_btn')}
                 </Button>
               </form>
             )}
@@ -375,14 +399,14 @@ export default function ShopPage() {
               onClick={() => { setCheckoutOpen(false); setClientSecret(null); }}
               className="font-body text-sm text-charcoal/50 hover:text-charcoal transition-colors text-center"
             >
-              Zpět do košíku
+              {t('back_to_basket')}
             </button>
           </div>
         </div>
       )}
 
       {/* Success */}
-      {success && <SuccessScreen onClose={() => setSuccess(false)} />}
+      {success && <SuccessScreen onClose={() => setSuccess(false)} strings={currentStrings} />}
     </div>
   );
 }

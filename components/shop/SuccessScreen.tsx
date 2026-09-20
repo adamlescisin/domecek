@@ -1,12 +1,15 @@
 'use client';
 
 import Button from '@/components/ui/Button';
+import { DEFAULT_STRINGS, type UiStrings } from '@/lib/ui-text';
 
 interface SuccessScreenProps {
   onClose: () => void;
+  strings?: Partial<UiStrings>;
 }
 
-export default function SuccessScreen({ onClose }: SuccessScreenProps) {
+export default function SuccessScreen({ onClose, strings }: SuccessScreenProps) {
+  const s = { ...DEFAULT_STRINGS, ...strings };
   return (
     <div className="fixed inset-0 bg-cream z-50 flex flex-col items-center justify-center gap-6 p-8 text-center">
       <div className="w-20 h-20 rounded-full bg-sage/15 flex items-center justify-center">
@@ -31,12 +34,12 @@ export default function SuccessScreen({ onClose }: SuccessScreenProps) {
       </div>
       <div>
         <h2 className="font-display text-3xl font-semibold text-charcoal mb-2">
-          Děkujeme! Platba proběhla úspěšně.
+          {s.success_title}
         </h2>
-        <p className="font-body text-charcoal/60">Potvrzení posíláme na váš email.</p>
+        <p className="font-body text-charcoal/60">{s.success_subtitle}</p>
       </div>
       <Button onClick={onClose} variant="ghost" size="lg">
-        Zpět na výběr
+        {s.back_to_shop}
       </Button>
     </div>
   );

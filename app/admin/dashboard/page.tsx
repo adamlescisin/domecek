@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, LogOut, Pencil, Trash2, Check, X, ExternalLink } from 'lucide-react';
 import { formatCZK } from '@/lib/utils';
+import { UI_TEXT_FIELDS, DEFAULT_STRINGS, type UiStrings } from '@/lib/ui-text';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -104,6 +105,11 @@ export default function AdminDashboardPage() {
   const [savingLang, setSavingLang] = useState(false);
   const [deleteLangConfirm, setDeleteLangConfirm] = useState<number | null>(null);
 
+  // UI translations editing
+  const [uiTranslations, setUiTranslations] = useState<Record<string, Record<string, string>>>({});
+  const [uiTransLang, setUiTransLang] = useState<string>('');
+  const [savingUiTrans, setSavingUiTrans] = useState(false);
+
   const redirectToLogin = useCallback(() => { router.push('/admin/login'); }, [router]);
 
   const fetchItems = useCallback(async () => {
@@ -143,14 +149,25 @@ export default function AdminDashboardPage() {
     } catch { /* ignore */ }
   }, []);
 
+  const fetchUiTranslations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings?key=ui_translations');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.value && typeof data.value === 'object' && !Array.isArray(data.value)) {
+        setUiTranslations(data.value);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchItems(), fetchSections(), fetchOrders(), fetchLanguages()]);
+      await Promise.all([fetchItems(), fetchSections(), fetchOrders(), fetchLanguages(), fetchUiTranslations()]);
     } finally {
       setLoading(false);
     }
-  }, [fetchItems, fetchSections, fetchOrders, fetchLanguages]);
+  }, [fetchItems, fetchSections, fetchOrders, fetchLanguages, fetchUiTranslations]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -242,6 +259,25 @@ export default function AdminDashboardPage() {
       setEditLang(emptyLang);
       setShowLangForm(false);
     } finally { setSavingLang(false); }
+  }
+
+  // Set default UI trans language when languages load
+  useEffect(() => {
+    if (languages.length > 0 && !uiTransLang) setUiTransLang(languages[0].code);
+  }, [languages, uiTransLang]);
+
+  async function handleSaveUiTrans() {
+    setSavingUiTrans(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'ui_translations', value: uiTranslations }),
+      });
+      if (!res.ok) {
+        alert('Nepodařilo se uložit překlady rozhraní.');
+      }
+    } finally { setSavingUiTrans(false); }
   }
 
   async function handleDeleteLang(idx: number) {
@@ -596,6 +632,65 @@ export default function AdminDashboardPage() {
                 </button>
               )}
             </div>
+
+            {/* UI text translations */}
+            {languages.length > 0 && (
+              <div className="flex flex-col gap-4 pt-2 border-t border-border">
+                <div className="flex flex-col gap-1">
+                  <h3 className="font-display text-lg font-semibold text-charcoal">Překlady rozhraní</h3>
+                  <p className="font-body text-sm text-charcoal/50">
+                    Přeložte texty tlačítek a popisků pro každý jazyk.
+                  </p>
+                </div>
+
+                {/* Language tabs */}
+                <div className="flex gap-1 border-b border-border">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => setUiTransLang(lang.code)}
+                      className={`font-body text-sm px-3 py-2 border-b-2 transition-colors ${
+                        uiTransLang === lang.code
+                          ? 'border-charcoal text-charcoal font-medium'
+                          : 'border-transparent text-charcoal/50 hover:text-charcoal'
+                      }`}
+                    >
+                      {lang.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Fields for selected language */}
+                {uiTransLang && (
+                  <div className="bg-warm-white rounded-xl border border-border p-5 flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {UI_TEXT_FIELDS.map(({ key, label }) => (
+                        <div key={key} className="flex flex-col gap-1">
+                          <label className="font-body text-xs text-charcoal/50">{label}</label>
+                          <input
+                            value={uiTranslations[uiTransLang]?.[key] ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setUiTranslations((prev) => ({
+                                ...prev,
+                                [uiTransLang]: { ...prev[uiTransLang], [key]: val },
+                              }));
+                            }}
+                            placeholder={DEFAULT_STRINGS[key as keyof UiStrings]}
+                            className="px-3 py-1.5 rounded-lg border border-border bg-cream font-body text-sm text-charcoal placeholder:text-charcoal/30 focus:outline-none focus:ring-2 focus:ring-charcoal/20"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button onClick={handleSaveUiTrans} loading={savingUiTrans} size="sm">
+                        Uložit překlady
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>
