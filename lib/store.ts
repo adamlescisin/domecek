@@ -1,39 +1,15 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import path from 'path';
-import os from 'os';
+import { eq } from 'drizzle-orm';
+import { getDb } from '@/lib/db/client';
+import { sections as sectionsTable, items as itemsTable, orders as ordersTable } from '@/lib/db/schema';
 
-// Store data outside the project directory so redeployments never
-// overwrite it. Falls back to ~/domecek-data (the process user's actual
-// home dir) when DATA_DIR is not set, so no manual config is required.
-const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(os.homedir(), 'domecek-data'));
-
-function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-}
-
-function readJson<T>(filename: string, fallback: T): T {
-  ensureDataDir();
-  const fp = path.join(DATA_DIR, filename);
-  if (!existsSync(fp)) {
-    writeFileSync(fp, JSON.stringify(fallback, null, 2), 'utf-8');
-    return fallback;
-  }
-  return JSON.parse(readFileSync(fp, 'utf-8')) as T;
-}
-
-function writeJson<T>(filename: string, data: T): void {
-  ensureDataDir();
-  writeFileSync(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf-8');
-}
-
-export interface Section {
+export type Section = {
   id: number;
   name: string;
   sortOrder: number;
   createdAt: string;
-}
+};
 
-export interface Item {
+export type Item = {
   id: number;
   name: string;
   description: string | null;
@@ -43,9 +19,9 @@ export interface Item {
   sectionId: number | null;
   createdAt: string;
   updatedAt: string;
-}
+};
 
-export interface Order {
+export type Order = {
   id: number;
   stripePaymentId: string;
   stripeStatus: string;
@@ -54,107 +30,127 @@ export interface Order {
   customerName: string;
   lineItems: unknown[];
   createdAt: string;
+};
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function toIso(d: Date | string): string {
+  return d instanceof Date ? d.toISOString() : d;
 }
 
 // ── Sections ─────────────────────────────────────────────────────────────────
 
-export function getSections(): Section[] {
-  return readJson<Section[]>('sections.json', []);
+export async function getSections(): Promise<Section[]> {
+  const rows = await getDb().select().from(sectionsTable);
+  return rows.map((r) => ({ ...r, createdAt: toIso(r.createdAt) }));
 }
 
-function saveSections(sections: Section[]): void {
-  writeJson('sections.json', sections);
+export async function createSection(data: Omit<Section, 'id' | 'createdAt'>): Promise<Section> {
+  const now = new Date();
+  const [result] = await getDb()
+    .insert(sectionsTable)
+    .values({ name: data.name, sortOrder: data.sortOrder, createdAt: now });
+  const id = (result as { insertId: number }).insertId;
+  return { id, ...data, createdAt: now.toISOString() };
 }
 
-export function createSection(data: Omit<Section, 'id' | 'createdAt'>): Section {
-  const sections = getSections();
-  const nextId = sections.length > 0 ? Math.max(...sections.map((s) => s.id)) + 1 : 1;
-  const section: Section = { id: nextId, ...data, createdAt: new Date().toISOString() };
-  saveSections([...sections, section]);
-  return section;
-}
-
-export function updateSection(
+export async function updateSection(
   id: number,
-  updates: Partial<Omit<Section, 'id' | 'createdAt'>>
-): Section | null {
-  const sections = getSections();
-  const idx = sections.findIndex((s) => s.id === id);
-  if (idx === -1) return null;
-  const updated: Section = { ...sections[idx], ...updates };
-  sections[idx] = updated;
-  saveSections(sections);
-  return updated;
+  updates: Partial<Omit<Section, 'id' | 'createdAt'>>,
+): Promise<Section | null> {
+  await getDb().update(sectionsTable).set(updates).where(eq(sectionsTable.id, id));
+  const rows = await getDb().select().from(sectionsTable).where(eq(sectionsTable.id, id));
+  if (!rows.length) return null;
+  return { ...rows[0], createdAt: toIso(rows[0].createdAt) };
 }
 
-export function deleteSection(id: number): boolean {
-  const sections = getSections();
-  const next = sections.filter((s) => s.id !== id);
-  if (next.length === sections.length) return false;
-  saveSections(next);
-  return true;
+export async function deleteSection(id: number): Promise<boolean> {
+  const [result] = await getDb().delete(sectionsTable).where(eq(sectionsTable.id, id));
+  return (result as { affectedRows: number }).affectedRows > 0;
 }
 
 // ── Items ────────────────────────────────────────────────────────────────────
 
-export function getItems(): Item[] {
-  return readJson<Item[]>('items.json', []);
+export async function getItems(): Promise<Item[]> {
+  const rows = await getDb().select().from(itemsTable);
+  return rows.map((r) => ({
+    ...r,
+    priceCzk: String(r.priceCzk),
+    sectionId: r.sectionId ?? null,
+    createdAt: toIso(r.createdAt),
+    updatedAt: toIso(r.updatedAt),
+  }));
 }
 
-function saveItems(items: Item[]): void {
-  writeJson('items.json', items);
+export async function createItem(data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>): Promise<Item> {
+  const now = new Date();
+  const [result] = await getDb()
+    .insert(itemsTable)
+    .values({ ...data, createdAt: now, updatedAt: now });
+  const id = (result as { insertId: number }).insertId;
+  return { id, ...data, createdAt: now.toISOString(), updatedAt: now.toISOString() };
 }
 
-export function createItem(data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>): Item {
-  const items = getItems();
-  const nextId = items.length > 0 ? Math.max(...items.map((i) => i.id)) + 1 : 1;
-  const now = new Date().toISOString();
-  const item: Item = { id: nextId, ...data, createdAt: now, updatedAt: now };
-  saveItems([...items, item]);
-  return item;
-}
-
-export function updateItem(
+export async function updateItem(
   id: number,
-  updates: Partial<Omit<Item, 'id' | 'createdAt'>>
-): Item | null {
-  const items = getItems();
-  const idx = items.findIndex((i) => i.id === id);
-  if (idx === -1) return null;
-  const updated: Item = { ...items[idx], ...updates, updatedAt: new Date().toISOString() };
-  items[idx] = updated;
-  saveItems(items);
-  return updated;
+  updates: Partial<Omit<Item, 'id' | 'createdAt'>>,
+): Promise<Item | null> {
+  const dbUpdates: Record<string, unknown> = { ...updates, updatedAt: new Date() };
+  await getDb().update(itemsTable).set(dbUpdates).where(eq(itemsTable.id, id));
+  const rows = await getDb().select().from(itemsTable).where(eq(itemsTable.id, id));
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    ...r,
+    priceCzk: String(r.priceCzk),
+    sectionId: r.sectionId ?? null,
+    createdAt: toIso(r.createdAt),
+    updatedAt: toIso(r.updatedAt),
+  };
 }
 
-export function deleteItem(id: number): boolean {
-  const items = getItems();
-  const next = items.filter((i) => i.id !== id);
-  if (next.length === items.length) return false;
-  saveItems(next);
-  return true;
+export async function deleteItem(id: number): Promise<boolean> {
+  const [result] = await getDb().delete(itemsTable).where(eq(itemsTable.id, id));
+  return (result as { affectedRows: number }).affectedRows > 0;
 }
 
 // ── Orders ───────────────────────────────────────────────────────────────────
 
-export function getOrders(): Order[] {
-  return readJson<Order[]>('orders.json', []);
+export async function getOrders(): Promise<Order[]> {
+  const rows = await getDb().select().from(ordersTable);
+  return rows.map((r) => ({
+    ...r,
+    totalCzk: String(r.totalCzk),
+    customerEmail: r.customerEmail ?? '',
+    customerName: r.customerName ?? '',
+    lineItems: r.lineItems as unknown[],
+    createdAt: toIso(r.createdAt),
+  }));
 }
 
-function saveOrders(orders: Order[]): void {
-  writeJson('orders.json', orders);
-}
+export async function upsertOrder(data: Omit<Order, 'id'>): Promise<Order> {
+  const db = getDb();
+  const existing = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.stripePaymentId, data.stripePaymentId));
 
-export function upsertOrder(data: Omit<Order, 'id'>): Order {
-  const orders = getOrders();
-  const existingIdx = orders.findIndex((o) => o.stripePaymentId === data.stripePaymentId);
-  if (existingIdx !== -1) {
-    orders[existingIdx] = { ...orders[existingIdx], stripeStatus: data.stripeStatus };
-    saveOrders(orders);
-    return orders[existingIdx];
+  if (existing.length) {
+    await db
+      .update(ordersTable)
+      .set({ stripeStatus: data.stripeStatus })
+      .where(eq(ordersTable.stripePaymentId, data.stripePaymentId));
+    return { ...data, id: existing[0].id };
   }
-  const nextId = orders.length > 0 ? Math.max(...orders.map((o) => o.id)) + 1 : 1;
-  const order: Order = { id: nextId, ...data };
-  saveOrders([...orders, order]);
-  return order;
+
+  const [result] = await db.insert(ordersTable).values({
+    stripePaymentId: data.stripePaymentId,
+    stripeStatus:    data.stripeStatus,
+    totalCzk:        data.totalCzk,
+    customerEmail:   data.customerEmail,
+    customerName:    data.customerName,
+    lineItems:       data.lineItems,
+    createdAt:       new Date(data.createdAt),
+  });
+  return { ...data, id: (result as { insertId: number }).insertId };
 }

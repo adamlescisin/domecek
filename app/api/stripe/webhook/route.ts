@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const customerName = pi.charges?.data?.[0]?.billing_details?.name ?? 'Zákazník';
     const now = new Date();
 
-    upsertOrder({
+    await upsertOrder({
       stripePaymentId: pi.id,
       stripeStatus: pi.status,
       totalCzk: String(totalCzk),

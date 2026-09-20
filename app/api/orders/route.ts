@@ -7,7 +7,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const orders = getOrders();
-  // newest first
+  const orders = await getOrders();
   return NextResponse.json([...orders].sort((a, b) => b.id - a.id));
 }
