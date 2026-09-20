@@ -138,7 +138,8 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/settings?key=languages');
       if (!res.ok) return;
       const data = await res.json();
-      setLanguages(Array.isArray(data.value) ? data.value : []);
+      if (Array.isArray(data.value)) setLanguages(data.value);
+      // Don't clear if null — language may be in local state pending a DB save
     } catch { /* ignore */ }
   }, []);
 
@@ -227,11 +228,15 @@ export default function AdminDashboardPage() {
       } else {
         updated[editLangIdx] = editLang;
       }
-      await fetch('/api/settings', {
+      const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: 'languages', value: updated }),
       });
+      if (!res.ok) {
+        alert('Nepodařilo se uložit jazyk. Zkontrolujte, zda jsou v databázi vytvořeny tabulky settings a translations.');
+        return;
+      }
       setLanguages(updated);
       setEditLangIdx(null);
       setEditLang(emptyLang);
