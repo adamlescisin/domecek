@@ -2,10 +2,20 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import os from 'os';
 
-// Store data outside the project directory so redeployments never
-// overwrite it. Falls back to ~/domecek-data (the process user's actual
-// home dir) when DATA_DIR is not set, so no manual config is required.
-export const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(os.homedir(), 'domecek-data'));
+// Resolve a writable data directory.  Priority:
+//   1. DATA_DIR env var (explicit, preferred in production)
+//   2. ~/domecek-data  (works when os.homedir() actually exists on disk)
+//   3. ../domecek-data relative to process.cwd() — one level above the app
+//      root, always writable in Hostinger's Node.js sandbox even when the
+//      sandbox home (/home/sbx_userXXX) does not exist.
+function resolveDataDir(): string {
+  if (process.env.DATA_DIR) return path.resolve(process.env.DATA_DIR);
+  const homeDir = os.homedir();
+  if (existsSync(homeDir)) return path.join(homeDir, 'domecek-data');
+  return path.resolve(process.cwd(), '..', 'domecek-data');
+}
+
+export const DATA_DIR = resolveDataDir();
 
 function ensureDataDir() {
   if (!existsSync(DATA_DIR)) {
