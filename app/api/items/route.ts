@@ -6,9 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const admin = await isAdminRequest(req);
+    const url = new URL(req.url);
+    const wantsAdmin = url.searchParams.get('admin') === 'true';
+    const isAdmin = wantsAdmin && (await isAdminRequest(req));
     const items = await getItems();
-    const result = admin
+    const result = isAdmin
       ? [...items].sort((a, b) => a.sortOrder - b.sortOrder)
       : [...items].filter((i) => i.isActive === 1).sort((a, b) => a.sortOrder - b.sortOrder);
     return NextResponse.json(result);
