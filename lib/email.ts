@@ -100,7 +100,7 @@ function itemRows(items: LineItem[]) {
 }
 
 export async function sendCustomerReceipt(data: OrderEmailData) {
-  const { customerEmail, customerName, lineItems, totalCzk, lang } = data;
+  const { customerEmail, lineItems, totalCzk, lang } = data;
   const s = getStrings(lang);
   await resend.emails.send({
     from: process.env.EMAIL_FROM!,
