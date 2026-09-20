@@ -20,11 +20,13 @@ function isDirWritable(dir: string): boolean {
 function resolveDataDir(): string {
   if (process.env.DATA_DIR) return path.resolve(process.env.DATA_DIR);
   const homeDir = os.homedir();
-  // Only use the home-dir path when the home dir exists AND is writable.
-  // On Hostinger's sandbox os.homedir() can return /var or a path the
-  // process cannot write to.
   if (existsSync(homeDir) && isDirWritable(homeDir)) return path.join(homeDir, 'domecek-data');
-  // Fall back to one level above the app root, which the sandbox process owns.
+  // On Vercel / AWS Lambda process.cwd() is /var/task (read-only).
+  // /tmp is the only writable location in that environment — but it is
+  // ephemeral: data is lost on cold starts and is NOT shared between
+  // concurrent function instances.  Set DATA_DIR to a persistent store
+  // (e.g. a mounted volume on a VPS) to avoid data loss.
+  if (isDirWritable('/tmp')) return '/tmp/domecek-data';
   return path.resolve(process.cwd(), '..', 'domecek-data');
 }
 
