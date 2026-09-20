@@ -11,7 +11,7 @@ interface Item {
   priceCzk: string;
 }
 
-export default function ItemCard({ item }: { item: Item }) {
+export default function ItemCard({ item, priceDisplay }: { item: Item; priceDisplay?: string }) {
   const { items, addItem, updateQuantity } = useBasket();
   const basketItem = items.find((i) => i.id === item.id);
   const qty = basketItem?.quantity ?? 0;
@@ -30,7 +30,7 @@ export default function ItemCard({ item }: { item: Item }) {
       </div>
       <div className="flex items-center justify-between gap-4">
         <span className="font-display text-2xl text-charcoal">
-          {formatCZK(item.priceCzk)}
+          {priceDisplay ?? formatCZK(item.priceCzk)}
         </span>
         {qty === 0 ? (
           <button

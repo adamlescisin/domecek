@@ -22,13 +22,22 @@ interface Item {
   sectionId: number | null;
 }
 
+interface Language {
+  code: string;
+  name: string;
+  currency: string;
+  symbol: string;
+  rateFromCzk: number;
+}
+
 interface ItemTableProps {
   items: Item[];
   sections: Section[];
   onRefresh: () => void;
+  languages?: Language[];
 }
 
-export default function ItemTable({ items, sections, onRefresh }: ItemTableProps) {
+export default function ItemTable({ items, sections, onRefresh, languages = [] }: ItemTableProps) {
   const [editing, setEditing] = useState<Item | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -194,6 +203,7 @@ export default function ItemTable({ items, sections, onRefresh }: ItemTableProps
         <ItemModal
           item={editing}
           sections={sections}
+          languages={languages}
           onClose={() => setEditing(null)}
           onSave={() => { setEditing(null); onRefresh(); }}
         />

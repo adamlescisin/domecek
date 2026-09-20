@@ -29,3 +29,20 @@ export const orders = mysqlTable('orders', {
   lineItems:       json('line_items').notNull(),
   createdAt:       datetime('created_at').notNull(),
 });
+
+// Generic key→JSON value store for app settings (languages, exchange rates, …)
+export const settings = mysqlTable('settings', {
+  key:       varchar('key', { length: 100 }).notNull().primaryKey(),
+  value:     json('value').notNull(),
+  updatedAt: datetime('updated_at').notNull(),
+});
+
+// Per-entity translated strings  (items / sections, any text field)
+export const translations = mysqlTable('translations', {
+  id:         int('id').autoincrement().primaryKey(),
+  entityType: varchar('entity_type', { length: 50 }).notNull(),  // 'item' | 'section'
+  entityId:   int('entity_id').notNull(),
+  langCode:   varchar('lang_code', { length: 10 }).notNull(),
+  field:      varchar('field', { length: 100 }).notNull(),       // 'name' | 'description'
+  value:      text('value').notNull(),
+});

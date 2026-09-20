@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, Globe } from 'lucide-react';
 import { loadStripe, type Appearance } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { useBasket } from '@/lib/basket-context';
@@ -44,6 +44,22 @@ interface Section {
   sortOrder: number;
 }
 
+interface Language {
+  code: string;
+  name: string;
+  currency: string;
+  symbol: string;
+  rateFromCzk: number;
+}
+
+interface Translation {
+  entityType: string;
+  entityId: number;
+  langCode: string;
+  field: string;
+  value: string;
+}
+
 async function fetchJson<T>(url: string, fallback: T): Promise<T> {
   try {
     const res = await fetch(url);
@@ -55,9 +71,17 @@ async function fetchJson<T>(url: string, fallback: T): Promise<T> {
   }
 }
 
+function formatForeign(priceCzk: string, lang: Language): string {
+  const foreign = parseFloat(priceCzk) * lang.rateFromCzk;
+  return `${foreign.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${lang.symbol}`;
+}
+
 export default function ShopPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [activeLang, setActiveLang] = useState<string>('cs');
+  const [translations, setTranslations] = useState<Translation[]>([]);
   const [loading, setLoading] = useState(true);
   const [basketOpen, setBasketOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -74,14 +98,49 @@ export default function ShopPage() {
     Promise.all([
       fetchJson<Item[]>('/api/items', []),
       fetchJson<Section[]>('/api/sections', []),
+      fetchJson<{ key: string; value: Language[] | null }>('/api/settings?key=languages', { key: 'languages', value: null }),
     ])
-      .then(([fetchedItems, fetchedSections]) => {
+      .then(([fetchedItems, fetchedSections, settingsData]) => {
         setItems(fetchedItems);
         setSections(fetchedSections);
+        const langs = Array.isArray(settingsData?.value) ? settingsData.value : [];
+        setLanguages(langs);
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  // Load translations when language changes
+  useEffect(() => {
+    if (activeLang === 'cs') {
+      setTranslations([]);
+      return;
+    }
+    fetchJson<Translation[]>(`/api/translations?lang=${activeLang}`, []).then(setTranslations);
+  }, [activeLang]);
+
+  function getTranslation(entityType: string, entityId: number, field: string): string | null {
+    if (activeLang === 'cs') return null;
+    const t = translations.find(
+      (t) => t.entityType === entityType && t.entityId === entityId && t.field === field
+    );
+    return t?.value ?? null;
+  }
+
+  function translateItem(item: Item) {
+    return {
+      ...item,
+      name: getTranslation('item', item.id, 'name') ?? item.name,
+      description: getTranslation('item', item.id, 'description') ?? item.description,
+    };
+  }
+
+  function translateSection(section: Section) {
+    return {
+      ...section,
+      name: getTranslation('section', section.id, 'name') ?? section.name,
+    };
+  }
 
   function handleCheckout() {
     setBasketOpen(false);
@@ -130,19 +189,25 @@ export default function ShopPage() {
     setSuccess(true);
   }
 
+  const activeLangObj = languages.find((l) => l.code === activeLang) ?? null;
+
   const sortedSections = [...sections].sort((a, b) => a.sortOrder - b.sortOrder);
+  const translatedSections = sortedSections.map(translateSection);
   const groups: Array<{ sectionId: number | null; label: string | null; items: Item[] }> = [
-    ...sortedSections.map((s) => ({
+    ...translatedSections.map((s) => ({
       sectionId: s.id,
       label: s.name,
-      items: items.filter((i) => i.sectionId === s.id),
+      items: items.filter((i) => i.sectionId === s.id).map(translateItem),
     })),
     {
       sectionId: null,
       label: sortedSections.length > 0 ? 'Ostatní' : null,
-      items: items.filter((i) => i.sectionId == null),
+      items: items.filter((i) => i.sectionId == null).map(translateItem),
     },
   ].filter((g) => g.items.length > 0);
+
+  const priceDisplay = (item: Item) =>
+    activeLangObj ? formatForeign(item.priceCzk, activeLangObj) : formatCZK(item.priceCzk);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -150,21 +215,56 @@ export default function ShopPage() {
       <header className="sticky top-0 z-30 bg-cream/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo height={36} />
-          <button
-            onClick={() => setBasketOpen(true)}
-            className="flex items-center gap-2 font-body text-sm font-medium text-charcoal hover:text-brown transition-colors"
-            aria-label={`Košík (${count} položek)`}
-          >
-            <div className="relative">
-              <ShoppingBag size={22} />
-              {count > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-brown text-cream text-[10px] font-medium flex items-center justify-center">
-                  {count}
-                </span>
-              )}
-            </div>
-            <span className="hidden sm:inline">Košík {count > 0 ? `(${count})` : ''}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Language switcher */}
+            {languages.length > 0 && (
+              <div className="relative group">
+                <button
+                  className="flex items-center gap-1.5 font-body text-sm text-charcoal/60 hover:text-charcoal transition-colors"
+                  aria-label="Změnit jazyk"
+                >
+                  <Globe size={16} />
+                  <span className="hidden sm:inline uppercase text-xs">{activeLang}</span>
+                </button>
+                <div className="absolute right-0 top-full mt-1 z-10 hidden group-focus-within:block group-hover:block bg-warm-white border border-border rounded-xl shadow-lg min-w-[140px] py-1">
+                  <button
+                    onClick={() => setActiveLang('cs')}
+                    className={`w-full text-left px-3 py-2 font-body text-sm transition-colors ${
+                      activeLang === 'cs' ? 'text-charcoal font-medium' : 'text-charcoal/60 hover:bg-cream'
+                    }`}
+                  >
+                    Čeština (CZK)
+                  </button>
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => setActiveLang(lang.code)}
+                      className={`w-full text-left px-3 py-2 font-body text-sm transition-colors ${
+                        activeLang === lang.code ? 'text-charcoal font-medium' : 'text-charcoal/60 hover:bg-cream'
+                      }`}
+                    >
+                      {lang.name} ({lang.currency})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => setBasketOpen(true)}
+              className="flex items-center gap-2 font-body text-sm font-medium text-charcoal hover:text-brown transition-colors"
+              aria-label={`Košík (${count} položek)`}
+            >
+              <div className="relative">
+                <ShoppingBag size={22} />
+                {count > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-brown text-cream text-[10px] font-medium flex items-center justify-center">
+                    {count}
+                  </span>
+                )}
+              </div>
+              <span className="hidden sm:inline">Košík {count > 0 ? `(${count})` : ''}</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -191,7 +291,7 @@ export default function ShopPage() {
         ) : groups.length === 1 && groups[0].label === null ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {groups[0].items.map((item) => (
-              <ItemCard key={item.id} item={item} />
+              <ItemCard key={item.id} item={item} priceDisplay={priceDisplay(item)} />
             ))}
           </div>
         ) : (
@@ -205,7 +305,7 @@ export default function ShopPage() {
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {group.items.map((item) => (
-                    <ItemCard key={item.id} item={item} />
+                    <ItemCard key={item.id} item={item} priceDisplay={priceDisplay(item)} />
                   ))}
                 </div>
               </section>
