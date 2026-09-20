@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const sections = getSections().sort((a, b) => a.sortOrder - b.sortOrder);
+    const sections = (await getSections()).sort((a, b) => a.sortOrder - b.sortOrder);
     return NextResponse.json(sections);
   } catch (err) {
     const e = err as Error;
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Název sekce je povinný' }, { status: 400 });
     }
 
-    const section = createSection({ name: name.trim(), sortOrder: Number(sortOrder) });
+    const section = await createSection({ name: name.trim(), sortOrder: Number(sortOrder) });
     return NextResponse.json(section, { status: 201 });
   } catch (err) {
     const e = err as Error;

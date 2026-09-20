@@ -1,37 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getItems, getOrders, DATA_DIR } from '@/lib/store';
-import { existsSync, writeFileSync, unlinkSync } from 'fs';
-import path from 'path';
-import os from 'os';
+import { getItems, getOrders } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  // Test whether the data directory is writable before attempting a real read.
-  let writable = false;
-  let writeError: string | null = null;
-  const testFile = path.join(DATA_DIR, '.healthcheck');
   try {
-    writeFileSync(testFile, '1', 'utf-8');
-    unlinkSync(testFile);
-    writable = true;
-  } catch (err) {
-    writeError = (err as Error).message;
-  }
-
-  try {
-    const items = getItems();
-    const orders = getOrders();
+    const [items, orders] = await Promise.all([getItems(), getOrders()]);
     return NextResponse.json({
       ok: true,
-      dataDir: DATA_DIR,
-      dataDirExists: existsSync(DATA_DIR),
-      writable,
       items: items.length,
       orders: orders.length,
       env: {
-        DATA_DIR: process.env.DATA_DIR ?? '(not set — using os.homedir)',
-        os_homedir: os.homedir(),
+        DB_HOST: process.env.DB_HOST ? process.env.DB_HOST.replace(/./g, '*').slice(0, -4) + process.env.DB_HOST.slice(-4) : '(not set)',
         ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
         JWT_SECRET: !!process.env.JWT_SECRET,
         STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
@@ -42,17 +22,14 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        dataDir: DATA_DIR,
-        dataDirExists: existsSync(DATA_DIR),
-        writable,
-        writeError,
         error: e.message,
         env: {
-          DATA_DIR: process.env.DATA_DIR ?? '(not set — using os.homedir)',
-          os_homedir: os.homedir(),
+          DB_HOST: !!process.env.DB_HOST,
+          DB_USER: !!process.env.DB_USER,
+          DB_PASSWORD: !!process.env.DB_PASSWORD,
+          DB_NAME: !!process.env.DB_NAME,
           ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
           JWT_SECRET: !!process.env.JWT_SECRET,
-          STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
         },
       },
       { status: 503 },

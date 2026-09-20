@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.sortOrder !== undefined) updates.sortOrder = Number(body.sortOrder);
     if ('sectionId' in body) updates.sectionId = body.sectionId != null ? Number(body.sectionId) : null;
 
-    const updated = updateItem(id, updates);
+    const updated = await updateItem(id, updates);
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(updated);
   } catch (err) {
@@ -42,7 +42,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
   try {
-    const deleted = deleteItem(id);
+    const deleted = await deleteItem(id);
     if (!deleted) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (err) {

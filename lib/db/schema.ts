@@ -1,5 +1,12 @@
 import { mysqlTable, int, varchar, text, decimal, tinyint, json, datetime } from 'drizzle-orm/mysql-core';
 
+export const sections = mysqlTable('sections', {
+  id:        int('id').autoincrement().primaryKey(),
+  name:      varchar('name', { length: 200 }).notNull(),
+  sortOrder: int('sort_order').notNull().default(0),
+  createdAt: datetime('created_at').notNull(),
+});
+
 export const items = mysqlTable('items', {
   id:          int('id').autoincrement().primaryKey(),
   name:        varchar('name', { length: 200 }).notNull(),
@@ -7,6 +14,7 @@ export const items = mysqlTable('items', {
   priceCzk:    decimal('price_czk', { precision: 10, scale: 2 }).notNull(),
   isActive:    tinyint('is_active').notNull().default(1),
   sortOrder:   int('sort_order').notNull().default(0),
+  sectionId:   int('section_id'),
   createdAt:   datetime('created_at').notNull(),
   updatedAt:   datetime('updated_at').notNull(),
 });

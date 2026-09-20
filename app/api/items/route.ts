@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     const admin = await isAdminRequest(req);
-    const items = getItems();
+    const items = await getItems();
     const result = admin
       ? [...items].sort((a, b) => a.sortOrder - b.sortOrder)
       : [...items].filter((i) => i.isActive === 1).sort((a, b) => a.sortOrder - b.sortOrder);
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Chybí povinná pole' }, { status: 400 });
     }
 
-    const item = createItem({
+    const item = await createItem({
       name,
       description: description ?? null,
       priceCzk: Number(priceCzk).toFixed(2),

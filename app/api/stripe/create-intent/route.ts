@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No items' }, { status: 400 });
   }
 
-  const allItems = getItems();
+  const allItems = await getItems();
 
   const lineItems = requested.flatMap(({ id, quantity }) => {
     const item = allItems.find((i) => i.id === id && i.isActive === 1);
