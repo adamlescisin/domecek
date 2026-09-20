@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, accessSync, constants } from 'fs';
 import path from 'path';
 import os from 'os';
 
@@ -10,7 +10,6 @@ import os from 'os';
 //      sandbox home (/home/sbx_userXXX) does not exist.
 function isDirWritable(dir: string): boolean {
   try {
-    const { accessSync, constants } = require('fs') as typeof import('fs');
     accessSync(dir, constants.W_OK);
     return true;
   } catch {
