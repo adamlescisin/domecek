@@ -86,7 +86,7 @@ function formatCZK(amount: number) {
   return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', minimumFractionDigits: 0 }).format(amount);
 }
 
-function itemRows(items: LineItem[], s: EmailStrings) {
+function itemRows(items: LineItem[], _s: EmailStrings) {
   return items
     .map(
       (i) => `<tr>
