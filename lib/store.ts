@@ -5,10 +5,16 @@ import os from 'os';
 // Store data outside the project directory so redeployments never
 // overwrite it. Falls back to ~/domecek-data (the process user's actual
 // home dir) when DATA_DIR is not set, so no manual config is required.
-const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(os.homedir(), 'domecek-data'));
+export const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(os.homedir(), 'domecek-data'));
 
 function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  if (!existsSync(DATA_DIR)) {
+    try {
+      mkdirSync(DATA_DIR, { recursive: true });
+    } catch (err) {
+      throw new Error(`Cannot create data directory "${DATA_DIR}": ${(err as Error).message}`);
+    }
+  }
 }
 
 function readJson<T>(filename: string, fallback: T): T {
@@ -18,7 +24,15 @@ function readJson<T>(filename: string, fallback: T): T {
     writeFileSync(fp, JSON.stringify(fallback, null, 2), 'utf-8');
     return fallback;
   }
-  return JSON.parse(readFileSync(fp, 'utf-8')) as T;
+  const raw = readFileSync(fp, 'utf-8').trim();
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    // File is corrupt — overwrite with fallback so the next request succeeds.
+    writeFileSync(fp, JSON.stringify(fallback, null, 2), 'utf-8');
+    return fallback;
+  }
 }
 
 function writeJson<T>(filename: string, data: T): void {
