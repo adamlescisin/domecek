@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       status: string;
       amount: number;
       receipt_email?: string;
-      metadata?: { items?: string; customer_email?: string };
+      metadata?: { items?: string; customer_email?: string; lang?: string };
       charges?: { data?: Array<{ billing_details?: { email?: string; name?: string } }> };
     };
 
